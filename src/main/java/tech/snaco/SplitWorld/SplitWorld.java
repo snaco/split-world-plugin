@@ -9,8 +9,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
-import org.bukkit.inventory.PlayerInventory;
-import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class SplitWorld extends JavaPlugin implements Listener {
@@ -35,19 +33,24 @@ public class SplitWorld extends JavaPlugin implements Listener {
         var creative_key = new NamespacedKey(this, event.getPlayer().getName() + "_creative_inv");
         var player_pdc = event.getPlayer().getPersistentDataContainer();
         var player_inv = event.getPlayer().getInventory();
+        var player_game_mode = event.getPlayer().getGameMode();
 
-        if (player_location.getX() < 0) {
-            player_pdc.set(survival_key, new InventoryDataType(), event.getPlayer().getInventory());
+        if (player_location.getX() < 0 && player_game_mode == GameMode.SURVIVAL) {
+            player_pdc.set(survival_key, new ItemStackArrayDataType(), event.getPlayer().getInventory().getContents());
             player_inv.clear();
             event.getPlayer().setGameMode(GameMode.CREATIVE);
-            var creative_inv = event.getPlayer().getPersistentDataContainer().get(creative_key, new InventoryDataType());
-            player_inv.setContents((creative_inv.getContents()));
-        } else {
-            event.getPlayer().getPersistentDataContainer().set(creative_key, new InventoryDataType(), event.getPlayer().getInventory());
+            var creative_inv = player_pdc.get(creative_key, new ItemStackArrayDataType());
+            if (creative_inv != null) {
+                player_inv.setContents((creative_inv));
+            }
+        } else if (player_location.getX() > 0 && player_game_mode == GameMode.CREATIVE) {
+            player_pdc.set(creative_key, new ItemStackArrayDataType(), event.getPlayer().getInventory().getContents());
             player_inv.clear();
             event.getPlayer().setGameMode(GameMode.SURVIVAL);
-            var survival_inv = event.getPlayer().getPersistentDataContainer().get(survival_key, new InventoryDataType());
-            player_inv.setContents((survival_inv.getContents()));
+            var survival_inv = player_pdc.get(survival_key, new ItemStackArrayDataType());
+            if (survival_inv != null) {
+                player_inv.setContents((survival_inv));
+            }
         }
     }
 }

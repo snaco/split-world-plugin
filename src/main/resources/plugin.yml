@@ -4,4 +4,4 @@ main: tech.snaco.SplitWorld.SplitWorld
 description: Splits the world into two game modes along an axis
 author: snaco
 website: https://papermc.io
-api-version: 1.19.3
+api-version: 1.19
