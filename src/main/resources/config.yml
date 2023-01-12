@@ -1,8 +1,8 @@
-# The game mode when not on the creative side, recommend survival or adventure
+# The game mode when in a world that has enabled: false
 default_game_mode: "survival"
-# Per dimension configs, this should theoretically work for any dimension but is only tested on minecraft dimensions
-dimension_configs:
-  - dimension_name: "minecraft:overworld"
+# Per world configs, this should theoretically work for any world but is only tested on default minecraft worlds
+world_configs:
+  - world_name: "world"
     enabled: true
 #    which axis should the world be divided on
     border_axis: "X"
@@ -17,9 +17,9 @@ dimension_configs:
 #    this will replace all blocks with bedrock along the border as players encounter it, it helps by visually showing
 #    where the border actually is.
     replace_border_blocks: true
-  - dimension_name: "minecraft:the_nether"
-#    players will be in the default_game_mode whenever they are in this dimension
+  - world_name: "world_nether"
+#    players will be in the default_game_mode whenever they are in this world
     enabled: false
-  - dimension_name: "minecraft:the_end"
-#    players will be in the default_game_mode whenever they are in this dimension
+  - world_name: "world_the_end"
+#    players will be in the default_game_mode whenever they are in this world
     enabled: false

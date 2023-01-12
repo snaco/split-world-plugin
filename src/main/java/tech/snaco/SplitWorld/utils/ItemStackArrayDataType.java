@@ -1,4 +1,4 @@
-package tech.snaco.SplitWorld;
+package tech.snaco.SplitWorld.utils;
 
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataAdapterContext;
