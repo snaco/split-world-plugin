@@ -12,6 +12,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
@@ -129,24 +130,28 @@ public class SplitWorld extends JavaPlugin implements Listener {
         } else if (playerOnCreativeSide(player)) {
             switchPlayerGameMode(player, GameMode.CREATIVE);
         } else {
-            if (player.getGameMode() != GameMode.SURVIVAL){
+            var needs_warp = player.getGameMode() != GameMode.SURVIVAL;
+            switchPlayerGameMode(player, GameMode.SURVIVAL);
+            if (needs_warp) {
                 warpPlayerToGround(player);
             }
-            switchPlayerGameMode(player, GameMode.SURVIVAL);
         }
     }
 
     public void warpPlayerToGround(Player player) {
-        var location = player.getLocation();
-        var velocity = player.getVelocity();
-        var top = player.getWorld().getHighestBlockAt(location.getBlockX(), location.getBlockZ());
-        var pitch = location.getPitch();
-        var yaw = location.getYaw();
-        var destination = top.getLocation().add(0, 1, 0);
-        destination.setPitch(pitch);
-        destination.setYaw(yaw);
-        player.teleport(destination);
-        player.setVelocity(velocity);
+        if (player.getInventory().getChestplate().getType() != Material.ELYTRA) {
+            var location = player.getLocation();
+            var velocity = player.getVelocity();
+            var top = player.getWorld().getHighestBlockAt(location.getBlockX(), location.getBlockZ());
+            var pitch = location.getPitch();
+            var yaw = location.getYaw();
+            var destination = top.getLocation().add(0, 1, 0);
+            destination.setPitch(pitch);
+            destination.setYaw(yaw);
+            player.teleport(destination);
+            player.setVelocity(velocity);
+        }
+
     }
 
     public void switchPlayerGameMode(Player player, GameMode game_mode) {
