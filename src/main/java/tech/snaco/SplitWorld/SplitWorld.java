@@ -13,6 +13,7 @@ import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.util.Vector;
 import tech.snaco.SplitWorld.utils.ItemStackArrayDataType;
 import tech.snaco.SplitWorld.utils.WorldConfig;
 import tech.snaco.SplitWorld.utils.mc;
@@ -45,35 +46,18 @@ public class SplitWorld extends JavaPlugin implements Listener {
         var player = event.getPlayer();
         managePlayerGameMode(player);
         convertBufferZoneBlocksAroundPlayer(player);
+        if (playerInBufferZone(player)) {
+            if (event.getTo().getBlock().getType() != Material.AIR) {
+                event.setCancelled(true);
+            }
+        }
+
     }
 
     @EventHandler
     public void onPlayerWorldChange(PlayerChangedWorldEvent event) {
         managePlayerGameMode(event.getPlayer());
     }
-
-//    @EventHandler
-//    public void onChunkLoad(ChunkLoadEvent event) {
-//        var chunk = event.getChunk();
-//        var processed = chunk.getPersistentDataContainer().get(chunkProcessedKey, PersistentDataType.INTEGER);
-//        if (processed != null) {
-//            return;
-//        }
-//        for (int x = chunk.getX() * 16; x < chunk.getX() + 15; x++) {
-//            for (int z = chunk.getZ() * 16; z < chunk.getZ() + 15; z++) {
-//                for (int y = -64; y < 319; y++) {
-//                    Location loc = new Location(chunk.getWorld(), x, y, z);
-//                    var block = chunk.getWorld().getBlockAt(loc);
-//                    if (blockInBufferZone(block) && block.getType() != Material.AIR) {
-//                        block.setType(Material.BEDROCK);
-//                    }
-//                }
-//            }
-//        }
-//        chunk.getPersistentDataContainer().set(chunkProcessedKey, PersistentDataType.INTEGER, 1);
-//    }
-
-    /* Helper Methods */
 
     public void convertBufferZoneBlocksAroundPlayer(Player player) {
         var world_config = getWorldConfigFromPlayer(player);
@@ -97,7 +81,6 @@ public class SplitWorld extends JavaPlugin implements Listener {
                         loc.setX(loc.getX() + j);
                     }
                     if (world.getBlockAt(loc).getType() != Material.AIR || world.getBlockAt(loc).getType() == Material.CAVE_AIR) {
-
                         world.getBlockAt(loc).setType(Material.BEDROCK);
                     }
                 }
@@ -117,13 +100,22 @@ public class SplitWorld extends JavaPlugin implements Listener {
         } else if (playerOnCreativeSide(player)) {
             switchPlayerGameMode(player, GameMode.CREATIVE);
         } else {
+            if (player.getGameMode() != GameMode.SURVIVAL){
+                warpPlayerToGround(player);
+            }
             switchPlayerGameMode(player, GameMode.SURVIVAL);
-            warpPlayerToGround(player);
         }
     }
 
     public void warpPlayerToGround(Player player) {
-
+        var location = player.getLocation();
+        var top = player.getWorld().getHighestBlockAt(location.getBlockX(), location.getBlockZ());
+        var pitch = location.getPitch();
+        var yaw = location.getYaw();
+        var destination = top.getLocation().add(0, 1, 0);
+        destination.setPitch(pitch);
+        destination.setYaw(yaw);
+        player.teleport(destination);
     }
 
     public void switchPlayerGameMode(Player player, GameMode game_mode) {
