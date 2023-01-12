@@ -1,5 +1,5 @@
-.gradle
-.diea
+.gradle/
+.idea/
 build
 cache/
 libraries/
@@ -24,3 +24,4 @@ usercache.json
 version_history.json
 whitelist.json
 test-server/
+test-server.sh

@@ -1,0 +1,25 @@
+# The game mode when not on the creative side, recommend survival or adventure
+default_game_mode: "survival"
+# Per dimension configs, this should theoretically work for any dimension but is only tested on minecraft dimensions
+dimension_configs:
+  - dimension_name: "minecraft:overworld"
+    enabled: true
+#    which axis should the world be divided on
+    border_axis: "X"
+#    changing this will place the border at the specified coordinate, being on the "negative" side is defined by
+#    having a coordinate value less than border_location value + half of the border_width.
+    border_location: 0
+#    positive or negative
+    creative_side: "negative"
+#    defines the width of the border, while in this zone players will be put in spectator mode and prevented from
+#    going below the ground
+    border_width: 10
+#    this will replace all blocks with bedrock along the border as players encounter it, it helps by visually showing
+#    where the border actually is.
+    replace_border_blocks: true
+  - dimension_name: "minecraft:the_nether"
+#    players will be in the default_game_mode whenever they are in this dimension
+    enabled: false
+  - dimension_name: "minecraft:the_end"
+#    players will be in the default_game_mode whenever they are in this dimension
+    enabled: false
