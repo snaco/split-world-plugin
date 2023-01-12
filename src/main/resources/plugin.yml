@@ -5,3 +5,7 @@ description: Splits the world into two game modes along an axis
 author: snaco
 website: https://papermc.io
 api-version: 1.19
+commands:
+  understood:
+    description: You understand the nature of the split world and don't want to see the welcome message anymore.
+    usage: /understood

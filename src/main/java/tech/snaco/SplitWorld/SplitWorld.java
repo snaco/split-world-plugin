@@ -3,6 +3,8 @@ package tech.snaco.SplitWorld;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -10,10 +12,9 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
-import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
 import tech.snaco.SplitWorld.utils.ItemStackArrayDataType;
 import tech.snaco.SplitWorld.utils.WorldConfig;
 import tech.snaco.SplitWorld.utils.mc;
@@ -26,7 +27,8 @@ public class SplitWorld extends JavaPlugin implements Listener {
     FileConfiguration config = getConfig();
     GameMode default_game_mode;
     Map<String, WorldConfig> world_configs;
-    NamespacedKey chunkProcessedKey = new NamespacedKey(this, "split_world_buffered");
+    NamespacedKey chunk_processed_key = new NamespacedKey(this, "split_world_buffered");
+    NamespacedKey no_welcome_key = new NamespacedKey(this, "no_welcome_message");
 
     @Override
     public void onEnable() {
@@ -38,7 +40,34 @@ public class SplitWorld extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
-        event.getPlayer().sendMessage(Component.text("Hello " + event.getPlayer().getName()));
+        var player = event.getPlayer();
+        var player_pdc = player.getPersistentDataContainer();
+        var world_name = player.getWorld().getName();
+        var no_welcome = player_pdc.get(no_welcome_key, PersistentDataType.INTEGER);
+        if (!world_configs.containsKey(world_name) || !world_configs.get(world_name).enabled) {
+            return;
+        }
+        var world_config = getWorldConfigFromPlayer(player);
+        if (no_welcome == null) {
+            player.sendMessage(Component.text("Hello " + player.getName() + "! "
+                    + "This world is split! You can head over towards the " + world_config.creative_side
+                    + " side of the border at " + world_config.border_axis + "=" + world_config.border_location
+                    + " to enter the creative side of the world. Your inventory will automatically be saved"
+                    + " and loaded whenever you cross the border. Have fun!"));
+        }
+    }
+
+    @Override
+    public boolean onCommand(@NotNull CommandSender sender, Command cmd, @NotNull String label, String[] args) {
+        if (cmd.getName().equalsIgnoreCase("understood")) {
+            var player_name = sender.getName();
+            var player = sender.getServer().getPlayer(player_name);
+            var player_pdc = player.getPersistentDataContainer();
+            player_pdc.set(no_welcome_key, PersistentDataType.INTEGER, 1);
+            player.sendMessage("You will no longer see the welcome message for split world.");
+            return true;
+        }
+        return false;
     }
 
     @EventHandler
@@ -109,6 +138,7 @@ public class SplitWorld extends JavaPlugin implements Listener {
 
     public void warpPlayerToGround(Player player) {
         var location = player.getLocation();
+        var velocity = player.getVelocity();
         var top = player.getWorld().getHighestBlockAt(location.getBlockX(), location.getBlockZ());
         var pitch = location.getPitch();
         var yaw = location.getYaw();
@@ -116,6 +146,7 @@ public class SplitWorld extends JavaPlugin implements Listener {
         destination.setPitch(pitch);
         destination.setYaw(yaw);
         player.teleport(destination);
+        player.setVelocity(velocity);
     }
 
     public void switchPlayerGameMode(Player player, GameMode game_mode) {
