@@ -193,19 +193,19 @@ public class SplitWorld extends JavaPlugin implements Listener {
     }
 
     public void warpPlayerToGround(Player player) {
-        if (player.getInventory().getChestplate() != null && player.getInventory().getChestplate().getType() != Material.ELYTRA) {
-            var location = player.getLocation();
-            var velocity = player.getVelocity();
-            var top = player.getWorld().getHighestBlockAt(location.getBlockX(), location.getBlockZ());
-            var pitch = location.getPitch();
-            var yaw = location.getYaw();
-            var destination = top.getLocation().add(0, 1, 0);
-            destination.setPitch(pitch);
-            destination.setYaw(yaw);
-            player.teleport(destination);
-            player.setVelocity(velocity);
+        if (player.getInventory().getChestplate() != null && player.getInventory().getChestplate().getType() == Material.ELYTRA) {
+            return;
         }
-
+        var location = player.getLocation();
+        var velocity = player.getVelocity();
+        var top = player.getWorld().getHighestBlockAt(location.getBlockX(), location.getBlockZ());
+        var pitch = location.getPitch();
+        var yaw = location.getYaw();
+        var destination = top.getLocation().add(0, 1, 0);
+        destination.setPitch(pitch);
+        destination.setYaw(yaw);
+        player.teleport(destination);
+        player.setVelocity(velocity);
     }
 
     public void switchPlayerGameMode(Player player, GameMode game_mode) {
