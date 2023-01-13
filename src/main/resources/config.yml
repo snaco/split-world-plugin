@@ -1,25 +1,49 @@
+#
+# Split World Config
+#
+
 # The game mode when in a world that has enabled: false
 default_game_mode: "survival"
+
+# Disables the welcome message for everyone when set to true, default is false
+disable_welcome_message: false
+
 # Per world configs, this should theoretically work for any world but is only tested on default minecraft worlds
 world_configs:
+#  All properties are required, unless enabled is set to false in which case all other properties are ignored
   - world_name: "world"
+
+#    when true, split-world will manage the game mode of all players and keep their inventories separate by saving
+#    and loading them when they cross the border
     enabled: true
-#    which axis should the world be divided on
+
+#    which axis should the border be placed on
     border_axis: "X"
+
 #    changing this will place the border at the specified coordinate, being on the "negative" side is defined by
 #    having a coordinate value less than border_location value + half of the border_width.
     border_location: 0
-#    positive or negative
+
+#    positive or negative, the positive side is any value of the [border_axis] greater than the [border_location],
+#    the negative side is any value of the [border_axis] less than [border-location]
     creative_side: "negative"
+
 #    defines the width of the border, while in this zone players will be put in spectator mode and prevented from
-#    going below the ground
+#    going below the ground, this works best as an even number. I default to 10 so the gap is too far for players to
+#    toss items from the creative side back to the survival side.
     border_width: 10
+
 #    this will replace all blocks with bedrock along the border as players encounter it, it helps by visually showing
-#    where the border actually is.
+#    where the border actually is. This is a buffer zone where players will be in spectator but unable to pass through
+#    blocks
     replace_border_blocks: true
+
   - world_name: "world_nether"
-#    players will be in the default_game_mode whenever they are in this world
+
+#    players will be forcefully kept in the [default_game_mode] whenever they are in this world
     enabled: false
+
   - world_name: "world_the_end"
-#    players will be in the default_game_mode whenever they are in this world
+
+    #    players will be forcefully kept in the [default_game_mode] whenever they are in this world
     enabled: false
