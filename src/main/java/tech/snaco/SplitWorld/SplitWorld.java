@@ -1,8 +1,10 @@
 package tech.snaco.SplitWorld;
 
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
+import it.unimi.dsi.fastutil.Pair;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
+import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -19,6 +21,8 @@ import tech.snaco.SplitWorld.utils.ItemStackArrayDataType;
 import tech.snaco.SplitWorld.utils.WorldConfig;
 
 import java.awt.event.ItemEvent;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -110,12 +114,17 @@ public class SplitWorld extends JavaPlugin implements Listener {
         autoSetPlayerGameMode(player);
         convertBufferZoneBlocksAroundPlayer(player);
         if (playerInBufferZone(player)) {
-            if (event.getTo().getBlock().getType() != Material.AIR && event.getTo().getBlock().getType() != Material.WATER) {
-                event.setCancelled(true);
+        var to_block_location = event.getTo().getBlock().getLocation();
+        for (double y = -2; y < 2; y+=0.1) {
+            var next_block = to_block_location.clone().add(0, y, 0).getBlock();
+                if (next_block.getType() != Material.AIR && next_block.getType() != Material.WATER) {
+                    event.setCancelled(true);
+                    return;
+                }
             }
         }
-
     }
+
 
     @EventHandler
     public void onPlayerWorldChange(PlayerChangedWorldEvent event) {
