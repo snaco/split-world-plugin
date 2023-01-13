@@ -114,15 +114,13 @@ public class SplitWorld extends JavaPlugin implements Listener {
         autoSetPlayerGameMode(player);
         convertBufferZoneBlocksAroundPlayer(player);
         if (playerInBufferZone(player)) {
-        var to_block_location = event.getTo().getBlock().getLocation();
-        for (double y = -2; y < 2; y+=0.1) {
-            var next_block = to_block_location.clone().add(0, y, 0).getBlock();
-                if (next_block.getType() != Material.AIR && next_block.getType() != Material.WATER) {
-                    event.setCancelled(true);
-                    return;
-                }
+            var next_block = event.getTo().getBlock();
+            if (next_block.getType() != Material.AIR && next_block.getType() != Material.WATER) {
+                event.setCancelled(true);
+                return;
             }
         }
+
     }
 
 
