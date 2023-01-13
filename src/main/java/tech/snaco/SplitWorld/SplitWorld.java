@@ -1,5 +1,6 @@
 package tech.snaco.SplitWorld;
 
+import com.destroystokyo.paper.event.server.ServerTickEndEvent;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
 import org.bukkit.command.Command;
@@ -8,16 +9,16 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerChangedWorldEvent;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
-import org.bukkit.event.player.PlayerTeleportEvent;
+import org.bukkit.event.block.BlockFromToEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.player.*;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import tech.snaco.SplitWorld.utils.ItemStackArrayDataType;
 import tech.snaco.SplitWorld.utils.WorldConfig;
 
+import java.awt.event.ItemEvent;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -66,6 +67,13 @@ public class SplitWorld extends JavaPlugin implements Listener {
     }
 
     @EventHandler
+    public void onPlace(BlockPlaceEvent event) {
+        if (locationInBufferZone(event.getBlock().getLocation())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
     public void onTeleport(PlayerTeleportEvent event) {
         var destination = event.getTo();
         var player = event.getPlayer();
@@ -102,7 +110,7 @@ public class SplitWorld extends JavaPlugin implements Listener {
         autoSetPlayerGameMode(player);
         convertBufferZoneBlocksAroundPlayer(player);
         if (playerInBufferZone(player)) {
-            if (event.getTo().getBlock().getType() != Material.AIR) {
+            if (event.getTo().getBlock().getType() != Material.AIR && event.getTo().getBlock().getType() != Material.WATER) {
                 event.setCancelled(true);
             }
         }
@@ -114,14 +122,17 @@ public class SplitWorld extends JavaPlugin implements Listener {
         autoSetPlayerGameMode(event.getPlayer());
     }
 
-    public void convertBufferZoneBlocksAroundPlayer(Player player) {
-        var world_config = getWorldConfig(player.getWorld());
-        var world = player.getWorld();
-        var player_location = player.getLocation();
-
-        if (!playerInBufferZone(player)) {
-            return;
+    @EventHandler
+    public void onBlockFromTo(BlockFromToEvent event) {
+        if (locationInBufferZone(event.getToBlock().getLocation())) {
+            event.setCancelled(true);
         }
+    }
+
+    public void convertBufferZoneBlocksAroundPlayer(Player player) {
+        var world = player.getWorld();
+        var world_config = getWorldConfig(world);
+        var player_location = player.getLocation().clone();
 
         for (int i = world_config.border_location - (world_config.border_width / 2); i < world_config.border_location + (world_config.border_width / 2); i++) {
             for (int j = -5; j < 5; j++) {
@@ -135,8 +146,11 @@ public class SplitWorld extends JavaPlugin implements Listener {
                         loc.setZ(i);
                         loc.setX(loc.getX() + j);
                     }
-                    if (world.getBlockAt(loc).getType() != Material.AIR || world.getBlockAt(loc).getType() == Material.CAVE_AIR) {
+                    var block_type = world.getBlockAt(loc).getType();
+                    if (block_type != Material.AIR && block_type != Material.WATER && block_type != Material.LAVA) {
                         world.getBlockAt(loc).setType(Material.BEDROCK);
+                    } else if (block_type == Material.WATER || block_type == Material.LAVA) {
+                        world.getBlockAt(loc).setType(Material.AIR);
                     }
                 }
             }
@@ -164,7 +178,7 @@ public class SplitWorld extends JavaPlugin implements Listener {
     }
 
     public void warpPlayerToGround(Player player) {
-        if (player.getInventory().getChestplate().getType() != Material.ELYTRA) {
+        if (player.getInventory().getChestplate() != null && player.getInventory().getChestplate().getType() != Material.ELYTRA) {
             var location = player.getLocation();
             var velocity = player.getVelocity();
             var top = player.getWorld().getHighestBlockAt(location.getBlockX(), location.getBlockZ());
@@ -240,7 +254,7 @@ public class SplitWorld extends JavaPlugin implements Listener {
     public boolean locationInBufferZone(Location location) {
         var pos = getRelevantPos(location);
         var world_config = getWorldConfig(location.getWorld());
-        return pos > world_config.border_location - (world_config.border_width / 2.0)
+        return pos >= world_config.border_location - (world_config.border_width / 2.0)
             && pos < world_config.border_location + (world_config.border_width / 2.0);
     }
 
