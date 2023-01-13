@@ -123,6 +123,14 @@ public class SplitWorld extends JavaPlugin implements Listener {
     }
 
     @EventHandler
+    public void onDrop(PlayerDropItemEvent event) {
+        if (event.getPlayer().getGameMode() == GameMode.CREATIVE) {
+            event.setCancelled(true);
+            return;
+        }
+    }
+
+    @EventHandler
     public void onBlockFromTo(BlockFromToEvent event) {
         if (locationInBufferZone(event.getToBlock().getLocation())) {
             event.setCancelled(true);
