@@ -22,6 +22,7 @@ import tech.snaco.SplitWorld.utils.ItemStackArrayDataType;
 import tech.snaco.SplitWorld.utils.WorldConfig;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -33,6 +34,7 @@ public class SplitWorld extends JavaPlugin implements Listener {
     Map<String, WorldConfig> world_configs;
     NamespacedKey no_welcome_key = new NamespacedKey(this, "no_welcome_message");
     ArrayList<Item> dropped_items = new ArrayList<>();
+    int number_of_worlds_enabled;
 
     @Override
     public void onEnable() {
@@ -45,6 +47,7 @@ public class SplitWorld extends JavaPlugin implements Listener {
         };
         world_configs = config.getList("world_configs").stream().map(item -> new WorldConfig((Map<String, Object>) item)).collect(Collectors.toMap(WorldConfig::getWorldName, item -> item));
         Bukkit.getPluginManager().registerEvents(this, this);
+        number_of_worlds_enabled = world_configs.values().stream().filter(world -> world.enabled).toList().size();
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -78,34 +81,81 @@ public class SplitWorld extends JavaPlugin implements Listener {
     @EventHandler
     public void preProcessCommand(PlayerCommandPreprocessEvent event) {
         var ignore_commands = List.of("/fill", "/clone", "/setblock");
-        //fill x1 y2 z3 x2 y2 z2 block_type
+        var player = event.getPlayer();
+
+        var world = player.getWorld();
         var command_str = event.getMessage();
         var command_args = command_str.split(" ");
-        var world = event.getPlayer().getWorld();
-
-        if (command_args.length >= 8) {
-            var x1 = Integer.parseInt(command_args[1]);
-            var y1 = Integer.parseInt(command_args[2]);
-            var z1 = Integer.parseInt(command_args[3]);
-            var x2 = Integer.parseInt(command_args[4]);
-            var y2 = Integer.parseInt(command_args[5]);
-            var z2 = Integer.parseInt(command_args[6]);
-            var location1 = new Location(world, (double)x1, (double)y1, (double)z1);
-            var location2 = new Location(world, (double)x2, (double)y2, (double)z2);
-
-            for (var command : ignore_commands) {
-                if (event.getMessage().toLowerCase().contains(command)) {
-                    if (!playerOnCreativeSide(event.getPlayer()) || !worldEnabled(world)) {
-                        event.getPlayer().sendMessage("The command " + command + " is only allowed in creative!");
-                        event.setCancelled(true);
-                    }
-                    if (!locationOnCreativeSide(location1) || !locationOnCreativeSide(location2)) {
-                        event.getPlayer().sendMessage("The command " + command + " cannot include blocks outside the creative zone(s).");
-                        event.setCancelled(true);
-                    }
+        if (command_args.length < 3) {
+            return;
+        }
+        if (!ignore_commands.contains(command_args[0])) {
+            return;
+        }
+        if (player.getGameMode() == GameMode.SURVIVAL) {
+            player.sendMessage("You cannot use the " + command_args[0] + " command in survival.");
+            event.setCancelled(true);
+            return;
+        }
+        var coordinates = getCoordinates(command_args);
+        if (coordinates == null) {
+            return;
+        }
+        var locations = getLocations(coordinates, world);
+        if (locations == null) {
+            return;
+        }
+        for (var location : locations) {
+            if (!locationOnCreativeSide(location)) {
+                if (number_of_worlds_enabled > 1) {
+                    player.sendMessage("The " + command_args[0] + " command cannot include blocks outside the creative sides of split worlds");
+                    event.setCancelled(true);
+                } else if (number_of_worlds_enabled == 1) {
+                    player.sendMessage("The " + command_args[0] + " command cannot include blocks outside the creative side of the split world");
+                    event.setCancelled(true);
                 }
+                // we don't need to evaluate any more locations after finding one out of bounds
+                return;
             }
         }
+    }
+
+    public List<Double> getCoordinates(String[] command_args) {
+        var args = new ArrayList<>(Arrays.asList(command_args));
+        var command = args.remove(0);
+        if (args.size() == 0) {
+                return null;
+        }
+        var coordinate_count = switch (command) {
+            case "/fill" -> 6;
+            case "/clone" -> 9;
+            case "/setblock" -> 3;
+            default -> -1;
+        };
+        if (coordinate_count == -1) {
+            return null;
+        }
+        if (args.size() < coordinate_count) {
+            return null;
+        }
+        List<Double> coordinates = new ArrayList<>();
+        for (int i = 0; i < coordinate_count; i++) {
+            coordinates.add(Double.parseDouble(args.get(i)));
+        }
+        return coordinates;
+    }
+
+    public List<Location> getLocations(List<Double> coordinates, World world) {
+        var size = coordinates.size();
+        if (size < 3 || size % 3 != 0) {
+            return null;
+        }
+        List<Location> locations = new ArrayList<>();
+        for (int i = 0; i < size / 3; i ++) {
+            var index = i * 3;
+            locations.add(new Location(world, coordinates.get(index), coordinates.get(index + 1), coordinates.get(index + 2)));
+        }
+        return locations;
     }
 
     @EventHandler
