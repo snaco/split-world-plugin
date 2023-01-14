@@ -1,29 +1,29 @@
 package tech.snaco.SplitWorld;
 
-import com.destroystokyo.paper.event.server.ServerTickEndEvent;
-import it.unimi.dsi.fastutil.Pair;
+
+import io.papermc.paper.event.entity.EntityMoveEvent;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
-import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockFromToEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.entity.ItemSpawnEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.jetbrains.annotations.NotNull;
 import tech.snaco.SplitWorld.utils.ItemStackArrayDataType;
 import tech.snaco.SplitWorld.utils.WorldConfig;
 
-import java.awt.event.ItemEvent;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
+import java.util.Vector;
 import java.util.stream.Collectors;
 
 @SuppressWarnings({"unchecked", "DataFlowIssue"})
@@ -31,8 +31,8 @@ public class SplitWorld extends JavaPlugin implements Listener {
     FileConfiguration config = getConfig();
     GameMode default_game_mode;
     Map<String, WorldConfig> world_configs;
-    NamespacedKey chunk_processed_key = new NamespacedKey(this, "split_world_buffered");
     NamespacedKey no_welcome_key = new NamespacedKey(this, "no_welcome_message");
+    ArrayList<Item> dropped_items = new ArrayList<>();
 
     @Override
     public void onEnable() {
@@ -45,7 +45,36 @@ public class SplitWorld extends JavaPlugin implements Listener {
         };
         world_configs = config.getList("world_configs").stream().map(item -> new WorldConfig((Map<String, Object>) item)).collect(Collectors.toMap(WorldConfig::getWorldName, item -> item));
         Bukkit.getPluginManager().registerEvents(this, this);
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                if ((long) dropped_items.size() > 0) {
+                    var items_to_remove = new ArrayList<Item>();
+                    for (Item item : dropped_items) {
+                        if (locationInBufferZone(item.getLocation())) {
+                            item.remove();
+                            items_to_remove.add(item);
+                        }
+                    }
+                    dropped_items.removeAll(items_to_remove);
+                }
+            }
+        }.runTaskTimer(this, 0, 1L);
     }
+
+    @Override
+    public boolean onCommand(@NotNull CommandSender sender, Command cmd, @NotNull String label, String[] args) {
+        if (cmd.getName().equalsIgnoreCase("understood")) {
+            var player_name = sender.getName();
+            var player = sender.getServer().getPlayer(player_name);
+            var player_pdc = player.getPersistentDataContainer();
+            player_pdc.set(no_welcome_key, PersistentDataType.INTEGER, 1);
+            player.sendMessage("You will no longer see the welcome message for split world.");
+            return true;
+        }
+        return false;
+    }
+
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
@@ -95,46 +124,26 @@ public class SplitWorld extends JavaPlugin implements Listener {
         }
     }
 
-    @Override
-    public boolean onCommand(@NotNull CommandSender sender, Command cmd, @NotNull String label, String[] args) {
-        if (cmd.getName().equalsIgnoreCase("understood")) {
-            var player_name = sender.getName();
-            var player = sender.getServer().getPlayer(player_name);
-            var player_pdc = player.getPersistentDataContainer();
-            player_pdc.set(no_welcome_key, PersistentDataType.INTEGER, 1);
-            player.sendMessage("You will no longer see the welcome message for split world.");
-            return true;
-        }
-        return false;
-    }
-
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent event) {
         var player = event.getPlayer();
-        autoSetPlayerGameMode(player);
         convertBufferZoneBlocksAroundPlayer(player);
+        switchPlayerToConfiguredGameMode(player);
+        if (warpIsRecommended(player)) {
+            warpPlayerToGround(player);
+        }
         if (playerInBufferZone(player)) {
             var next_block = event.getTo().getBlock();
             if (next_block.getType() != Material.AIR && next_block.getType() != Material.WATER) {
                 event.setCancelled(true);
-                return;
             }
         }
 
     }
 
-
     @EventHandler
     public void onPlayerWorldChange(PlayerChangedWorldEvent event) {
-        autoSetPlayerGameMode(event.getPlayer());
-    }
-
-    @EventHandler
-    public void onDrop(PlayerDropItemEvent event) {
-        if (event.getPlayer().getGameMode() == GameMode.CREATIVE) {
-            event.setCancelled(true);
-            return;
-        }
+        switchPlayerToConfiguredGameMode(event.getPlayer());
     }
 
     @EventHandler
@@ -144,60 +153,92 @@ public class SplitWorld extends JavaPlugin implements Listener {
         }
     }
 
-    public void convertBufferZoneBlocksAroundPlayer(Player player) {
-        var world = player.getWorld();
-        var world_config = getWorldConfig(world);
-        var player_location = player.getLocation().clone();
+    @EventHandler
+    public void onItemSpawn(ItemSpawnEvent event) {
+        dropped_items.add(event.getEntity());
+    }
 
-        for (int i = world_config.border_location - (world_config.border_width / 2); i < world_config.border_location + (world_config.border_width / 2); i++) {
-            for (int j = -5; j < 5; j++) {
+    @EventHandler
+    public void onEntityMove(EntityMoveEvent event) {
+        var entity = event.getEntity();
+        var entity_location = event.getTo();
+        var entity_world_name = entity_location.getWorld().getName();
+
+        // Only do for monsters
+        if (!(entity instanceof Monster)) { return; }
+        // Make sure it's in an enabled world
+        if (!world_configs.containsKey(entity_world_name) || !world_configs.get(entity_world_name).enabled) { return; }
+        // only do this if players are online
+        if (entity.getServer().getOnlinePlayers().size() == 0) { return; }
+        // don't affect monster's not trying to move in to the buffer zone
+        if (!locationInBufferZone(entity_location)) {
+            return;
+        }
+        // Stop it, don't go there. The buffer zone is forbidden to monsters.
+        event.setCancelled(true);
+    }
+
+    @EventHandler
+    public void onPickup(PlayerAttemptPickupItemEvent event) {
+        if (locationInBufferZone(event.getItem().getLocation())) {
+            event.setCancelled(true);
+        }
+    }
+
+    public void convertBufferZoneBlocksAroundPlayer(Player player) {
+        var x_radius = 5;
+        var z_radius = 5;
+        var player_location = player.getLocation().clone();
+        for (int x = -x_radius; x < x_radius; x++) {
+            for (int z = -z_radius; z < z_radius; z++) {
                 for (int y = -64; y < 319; y++) {
-                    Location loc = player_location.clone();
-                    loc.setY((double) y);
-                    if (world_config.border_axis.equals("X")) {
-                        loc.setX(i);
-                        loc.setZ(loc.getZ() + j);
-                    } else {
-                        loc.setZ(i);
-                        loc.setX(loc.getX() + j);
-                    }
-                    var block_type = world.getBlockAt(loc).getType();
-                    if (block_type != Material.AIR && block_type != Material.WATER && block_type != Material.LAVA) {
-                        world.getBlockAt(loc).setType(Material.BEDROCK);
-                    } else if (block_type == Material.WATER || block_type == Material.LAVA) {
-                        world.getBlockAt(loc).setType(Material.AIR);
+                    var x_y_z_coordinates = player_location.add(x, 0, z);
+                    x_y_z_coordinates.setY(y);
+                    if (locationInBufferZone(x_y_z_coordinates)) {
+                        if (locationIsTraversable(x_y_z_coordinates)) {
+                            x_y_z_coordinates.getBlock().setType(Material.AIR);
+                        } else {
+                            x_y_z_coordinates.getBlock().setType(Material.BEDROCK);
+                        }
                     }
                 }
             }
         }
     }
 
-    public void autoSetPlayerGameMode(Player player) {
-        var player_world = player.getLocation().getWorld().getName();
-        if (!world_configs.containsKey(player_world) || !world_configs.get(player_world).enabled) {
+    public boolean locationIsTraversable(Location location) {
+        var world = location.getWorld();
+        var block_type = world.getBlockAt(location).getType();
+        return block_type == Material.AIR || block_type == Material.WATER || block_type == Material.LAVA;
+    }
+
+
+    public void switchPlayerToConfiguredGameMode(Player player) {
+        // keep players in the default mode when disabled for the world
+        if (!worldEnabled(player.getWorld())) {
             switchPlayerGameMode(player, default_game_mode);
             return;
         }
-
+        // set to spectator for buffer zone
         if (playerInBufferZone(player)) {
             switchPlayerGameMode(player, GameMode.SPECTATOR);
+        // creative side
         } else if (playerOnCreativeSide(player)) {
             switchPlayerGameMode(player, GameMode.CREATIVE);
+        // survival side
         } else {
-            var needs_warp = player.getGameMode() != GameMode.SURVIVAL;
             switchPlayerGameMode(player, GameMode.SURVIVAL);
-            if (needs_warp) {
-                warpPlayerToGround(player);
-            }
         }
     }
 
+    public boolean worldEnabled(World world) {
+        var world_name = world.getName();
+        return world_configs.containsKey(world_name) && world_configs.get(world_name).enabled;
+    }
+
     public void warpPlayerToGround(Player player) {
-        if (player.getInventory().getChestplate() != null && player.getInventory().getChestplate().getType() == Material.ELYTRA) {
-            return;
-        }
-        var location = player.getLocation();
-        var velocity = player.getVelocity();
+        var location = player.getLocation().clone();
+        var velocity = player.getVelocity().clone();
         var top = player.getWorld().getHighestBlockAt(location.getBlockX(), location.getBlockZ());
         var pitch = location.getPitch();
         var yaw = location.getYaw();
@@ -206,6 +247,12 @@ public class SplitWorld extends JavaPlugin implements Listener {
         destination.setYaw(yaw);
         player.teleport(destination);
         player.setVelocity(velocity);
+    }
+
+    public Boolean warpIsRecommended(Player player) {
+        return player.getInventory().getChestplate() != null &&
+                player.getInventory().getChestplate().getType() == Material.ELYTRA &&
+                player.getGameMode() == GameMode.SURVIVAL;
     }
 
     public void switchPlayerGameMode(Player player, GameMode game_mode) {
@@ -258,10 +305,6 @@ public class SplitWorld extends JavaPlugin implements Listener {
         } else return world_config.creative_side.equals("positive") && locationOnPositiveSideOfBuffer(location);
     }
 
-    public double getRelevantPlayerPos(Player player) {
-        return getRelevantPos(player.getLocation());
-    }
-
     public boolean playerInBufferZone(Player player) {
         return locationInBufferZone(player.getLocation());
     }
@@ -273,20 +316,12 @@ public class SplitWorld extends JavaPlugin implements Listener {
             && pos < world_config.border_location + (world_config.border_width / 2.0);
     }
 
-//    public boolean blockInBufferZone(Block block) {
-//        return locationInBufferZone(block.getLocation());
-//    }
-//
-//    public boolean playerOnNegativeSideOfBufferZone(Player player) {
-//        var world_config = getWorldConfig(player.getWorld());
-//        var pos = getRelevantPlayerPos(player);
-//        return pos < world_config.border_location - (world_config.border_width / 2.0);
-//    }
-//    public boolean playerOnPositiveSideOfBufferZone(Player player) {
-//        var pos = getRelevantPos(player.getLocation());
-//        var world_config = getWorldConfig(player.getWorld());
-//        return pos > world_config.border_location + (world_config.border_width / 2.0);
-//    }
+    public boolean locationWithinDistanceOfBuffer(Location location, int distance) {
+        var pos = getRelevantPos(location);
+        var world_config = getWorldConfig(location.getWorld());
+        return pos >= world_config.border_location - (world_config.border_width / 2.0) - distance
+                && pos < world_config.border_location + (world_config.border_width / 2.0) + distance;
+    }
 
     public boolean locationOnPositiveSideOfBuffer(Location location) {
         var world_config = getWorldConfig(location.getWorld());
@@ -306,6 +341,15 @@ public class SplitWorld extends JavaPlugin implements Listener {
             case "Y" -> location.getY();
             case "Z" -> location.getZ();
             default -> location.getX();
+        };
+    }
+
+    public Location addToRelevantPos(Location location, double value) {
+        var world_config = getWorldConfig(location.getWorld());
+        return switch (world_config.border_axis) {
+            case "Y" -> location.add(0, value, 0);
+            case "Z" -> location.add(0, 0, value);
+            default -> location.add(value, 0, 0);
         };
     }
 
