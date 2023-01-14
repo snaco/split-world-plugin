@@ -22,8 +22,8 @@ import tech.snaco.SplitWorld.utils.ItemStackArrayDataType;
 import tech.snaco.SplitWorld.utils.WorldConfig;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
-import java.util.Vector;
 import java.util.stream.Collectors;
 
 @SuppressWarnings({"unchecked", "DataFlowIssue"})
@@ -75,6 +75,38 @@ public class SplitWorld extends JavaPlugin implements Listener {
         return false;
     }
 
+    @EventHandler
+    public void preProcessCommand(PlayerCommandPreprocessEvent event) {
+        var ignore_commands = List.of("/fill", "/clone", "/setblock");
+        //fill x1 y2 z3 x2 y2 z2 block_type
+        var command_str = event.getMessage();
+        var command_args = command_str.split(" ");
+        var world = event.getPlayer().getWorld();
+
+        if (command_args.length >= 8) {
+            var x1 = Integer.parseInt(command_args[1]);
+            var y1 = Integer.parseInt(command_args[2]);
+            var z1 = Integer.parseInt(command_args[3]);
+            var x2 = Integer.parseInt(command_args[4]);
+            var y2 = Integer.parseInt(command_args[5]);
+            var z2 = Integer.parseInt(command_args[6]);
+            var location1 = new Location(world, (double)x1, (double)y1, (double)z1);
+            var location2 = new Location(world, (double)x2, (double)y2, (double)z2);
+
+            for (var command : ignore_commands) {
+                if (event.getMessage().toLowerCase().contains(command)) {
+                    if (!playerOnCreativeSide(event.getPlayer()) || !worldEnabled(world)) {
+                        event.getPlayer().sendMessage("The command " + command + " is only allowed in creative!");
+                        event.setCancelled(true);
+                    }
+                    if (!locationOnCreativeSide(location1) || !locationOnCreativeSide(location2)) {
+                        event.getPlayer().sendMessage("The command " + command + " cannot include blocks outside the creative zone(s).");
+                        event.setCancelled(true);
+                    }
+                }
+            }
+        }
+    }
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
