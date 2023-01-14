@@ -147,7 +147,7 @@ public class SplitWorld extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onBlockFromTo(BlockFromToEvent event) {
-        if (locationInBufferZone(event.getToBlock().getLocation())) {
+        if (worldEnabled(event.getBlock().getWorld()) && locationInBufferZone(event.getToBlock().getLocation())) {
             event.setCancelled(true);
         }
     }
