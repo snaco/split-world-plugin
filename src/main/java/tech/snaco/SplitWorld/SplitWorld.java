@@ -164,6 +164,8 @@ public class SplitWorld extends JavaPlugin implements Listener {
         var entity_location = event.getTo();
         var entity_world_name = entity_location.getWorld().getName();
 
+        // don't do this to players
+        if (entity instanceof  Player) { return; }
         // Only do for monsters
         if (!(entity instanceof Monster)) { return; }
         // Make sure it's in an enabled world
