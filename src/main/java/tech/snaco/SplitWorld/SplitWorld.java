@@ -128,8 +128,12 @@ public class SplitWorld extends JavaPlugin implements Listener {
     public void onPlayerMove(PlayerMoveEvent event) {
         var player = event.getPlayer();
         convertBufferZoneBlocksAroundPlayer(player);
-        switchPlayerToConfiguredGameMode(player);
+        var needs_warp = false;
         if (warpIsRecommended(player)) {
+            needs_warp = true;
+        }
+        switchPlayerToConfiguredGameMode(player);
+        if (needs_warp) {
             warpPlayerToGround(player);
         }
         if (playerInBufferZone(player)) {
@@ -254,7 +258,9 @@ public class SplitWorld extends JavaPlugin implements Listener {
     public Boolean warpIsRecommended(Player player) {
         return player.getInventory().getChestplate() != null &&
                 player.getInventory().getChestplate().getType() == Material.ELYTRA &&
-                player.getGameMode() == GameMode.SURVIVAL;
+                player.getGameMode() != GameMode.SURVIVAL
+                && !playerOnCreativeSide(player)
+                && !playerInBufferZone(player);
     }
 
     public void switchPlayerGameMode(Player player, GameMode game_mode) {
@@ -278,7 +284,7 @@ public class SplitWorld extends JavaPlugin implements Listener {
         player_pdc.set(key, new ItemStackArrayDataType(), player.getInventory().getContents());
     }
 
-    public void loadPlayerInventory(Player player, GameMode game_mode) {
+    public void loadPlayerInventory(Player player, GameMode game_mod warpPlayerToGround(player);e) {
         var key = getPlayerInventoryKey(player, game_mode);
         var player_pdc = player.getPersistentDataContainer();
         var new_inv = player_pdc.get(key, new ItemStackArrayDataType());
