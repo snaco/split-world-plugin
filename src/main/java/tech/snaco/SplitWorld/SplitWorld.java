@@ -57,7 +57,7 @@ public class SplitWorld extends JavaPlugin implements Listener {
                 if ((long) dropped_items.size() > 0) {
                     var items_to_remove = new ArrayList<Item>();
                     for (Item item : dropped_items) {
-                        if (locationInBufferZone(item.getLocation())) {
+                        if (worldEnabled(item.getWorld()) && locationInBufferZone(item.getLocation())) {
                             item.remove();
                             items_to_remove.add(item);
                         }
@@ -210,6 +210,15 @@ public class SplitWorld extends JavaPlugin implements Listener {
     @EventHandler
     public void onPlayerWorldChange(PlayerChangedWorldEvent event) {
         switchPlayerToConfiguredGameMode(event.getPlayer());
+    }
+
+    @EventHandler
+    public void onPlayerRespawn(PlayerRespawnEvent event) {
+        var custom_respawn = config.getBoolean("custom_respawn", false);
+        var coordinates = Arrays.stream(config.getString("respawn_coordinates").split(" ")).map(Double::parseDouble).toList();
+        if (custom_respawn) {
+            event.setRespawnLocation(new Location(event.getPlayer().getWorld(), coordinates.get(0), coordinates.get(1), coordinates.get(2), -88, 6));
+        }
     }
 
     @EventHandler

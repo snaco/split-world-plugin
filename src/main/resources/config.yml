@@ -13,6 +13,13 @@ disable_welcome_message: false
 # can't use it on or targeting blocks outside of creative zones
 manage_creative_commands: true
 
+# set a custom respawn point, allows you to spawn underground but not in solid blocks.
+custom_respawn: false
+respawn_coordinates:
+  - x: 140
+  - y: 53
+  - z: -64
+
 # Per world configs, this should theoretically work for any world but is only tested on default minecraft worlds
 world_configs:
 #  All properties are required, unless enabled is set to false in which case all other properties are ignored

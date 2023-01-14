@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "tech.snaco"
-version = "2.0.10-ibt"
+version = "2.1.0-ibt"
 
 repositories {
     mavenCentral()
