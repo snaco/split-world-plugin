@@ -1,5 +1,5 @@
 name: SplitWorld
-version: 2.1.0-ibt
+version: 2.1.0
 main: tech.snaco.SplitWorld.SplitWorld
 description: Splits the world into two game modes
 author: snaco
