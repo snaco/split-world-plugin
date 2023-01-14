@@ -12,6 +12,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockFromToEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.ItemSpawnEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.persistence.PersistentDataType;
@@ -239,20 +240,36 @@ public class SplitWorld extends JavaPlugin implements Listener {
         var entity_location = event.getTo();
         var entity_world_name = entity_location.getWorld().getName();
 
-        // don't do this to players
-        if (entity instanceof  Player) { return; }
         // Only do for monsters
         if (!(entity instanceof Monster)) { return; }
         // Make sure it's in an enabled world
         if (!world_configs.containsKey(entity_world_name) || !world_configs.get(entity_world_name).enabled) { return; }
         // only do this if players are online
         if (entity.getServer().getOnlinePlayers().size() == 0) { return; }
+        // no monsters in creative side
+        if (locationOnCreativeSide(entity_location) && worldEnabled(entity.getWorld()) && getWorldConfig(entity.getWorld()).no_creative_monsters) {
+            entity.remove();
+            return;
+        }
         // don't affect monster's not trying to move in to the buffer zone
         if (!locationInBufferZone(entity_location)) {
             return;
         }
         // Stop it, don't go there. The buffer zone is forbidden to monsters.
         event.setCancelled(true);
+    }
+
+    @EventHandler
+    public void onCreatureSpawn(CreatureSpawnEvent event) {
+        var world = event.getLocation().getWorld();
+        if (!locationOnSurvivalSide(event.getLocation())
+                && event.getSpawnReason() == CreatureSpawnEvent.SpawnReason.NATURAL
+                && worldEnabled(world)
+                && getWorldConfig(world).no_creative_monsters
+                && event.getEntity() instanceof Monster
+        ) {
+            event.setCancelled(true);
+        }
     }
 
     @EventHandler

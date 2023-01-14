@@ -13,6 +13,7 @@ public class WorldConfig implements ConfigurationSerializable {
     public String creative_side;
     public int border_width;
     public boolean replace_border_blocks;
+    public boolean no_creative_monsters;
 
     public WorldConfig(Map<String, Object> map) {
         world_name = (String) map.get("world_name");
@@ -23,6 +24,7 @@ public class WorldConfig implements ConfigurationSerializable {
             creative_side = (String) map.get("creative_side");
             border_width = (int) map.get("border_width");
             replace_border_blocks = (boolean) map.get("replace_border_blocks");
+            no_creative_monsters = (boolean) map.get("no_creative_monsters");
         }
     }
 
@@ -39,7 +41,8 @@ public class WorldConfig implements ConfigurationSerializable {
             "border_location", border_location,
             "creative_side", creative_side,
             "border_width", border_width,
-            "replace_border_blocks", replace_border_blocks
+            "replace_border_blocks", replace_border_blocks,
+            "no_creative_monsters", no_creative_monsters
         );
     }
 }

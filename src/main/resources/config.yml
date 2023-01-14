@@ -50,6 +50,9 @@ world_configs:
 #    blocks
     replace_border_blocks: true
 
+    # this will prevent monsters from naturally spawning on the creative side
+    no_creative_monsters: true
+
   - world_name: "world_nether"
 
 #    players will be forcefully kept in the [default_game_mode] whenever they are in this world
