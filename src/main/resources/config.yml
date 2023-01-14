@@ -8,6 +8,11 @@ default_game_mode: "survival"
 # Disables the welcome message for everyone when set to true, default is false
 disable_welcome_message: false
 
+# allows players to use fill, setblock, and clone on the creative side. Make sure that by
+# default these players have permission to use them then split-world will make sure they
+# can't use it on or targeting blocks outside of creative zones
+manage_creative_commands: true
+
 # Per world configs, this should theoretically work for any world but is only tested on default minecraft worlds
 world_configs:
 #  All properties are required, unless enabled is set to false in which case all other properties are ignored

@@ -33,8 +33,10 @@ public class SplitWorld extends JavaPlugin implements Listener {
     GameMode default_game_mode;
     Map<String, WorldConfig> world_configs;
     NamespacedKey no_welcome_key = new NamespacedKey(this, "no_welcome_message");
+    NamespacedKey split_world_disabled_key = new NamespacedKey(this, "split_world_disabled");
     ArrayList<Item> dropped_items = new ArrayList<>();
     int number_of_worlds_enabled;
+    boolean manage_creative_commands;
 
     @Override
     public void onEnable() {
@@ -48,6 +50,7 @@ public class SplitWorld extends JavaPlugin implements Listener {
         world_configs = config.getList("world_configs").stream().map(item -> new WorldConfig((Map<String, Object>) item)).collect(Collectors.toMap(WorldConfig::getWorldName, item -> item));
         Bukkit.getPluginManager().registerEvents(this, this);
         number_of_worlds_enabled = world_configs.values().stream().filter(world -> world.enabled).toList().size();
+        manage_creative_commands = config.getBoolean("manage_creative_commands", true);
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -67,12 +70,24 @@ public class SplitWorld extends JavaPlugin implements Listener {
 
     @Override
     public boolean onCommand(@NotNull CommandSender sender, Command cmd, @NotNull String label, String[] args) {
+        var player_name = sender.getName();
+        var player = sender.getServer().getPlayer(player_name);
+        var player_pdc = player.getPersistentDataContainer();
         if (cmd.getName().equalsIgnoreCase("understood")) {
-            var player_name = sender.getName();
-            var player = sender.getServer().getPlayer(player_name);
-            var player_pdc = player.getPersistentDataContainer();
             player_pdc.set(no_welcome_key, PersistentDataType.INTEGER, 1);
             player.sendMessage("You will no longer see the welcome message for split world.");
+            return true;
+        }
+        if (cmd.getName().equalsIgnoreCase("disable-split-world")) {
+            if (player.hasPermission("split-world.disable-split-world")) {
+                player_pdc.set(split_world_disabled_key, PersistentDataType.INTEGER, 1);
+            }
+            return true;
+        }
+        if (cmd.getName().equalsIgnoreCase("enable-split-world")) {
+            if (player.hasPermission("split-world.enable-split-world")) {
+                player_pdc.set(split_world_disabled_key, PersistentDataType.INTEGER, 0);
+            }
             return true;
         }
         return false;
@@ -80,6 +95,9 @@ public class SplitWorld extends JavaPlugin implements Listener {
 
     @EventHandler
     public void preProcessCommand(PlayerCommandPreprocessEvent event) {
+        if (!manage_creative_commands) {
+            return;
+        }
         var ignore_commands = List.of("/fill", "/clone", "/setblock");
         var player = event.getPlayer();
 
@@ -101,7 +119,7 @@ public class SplitWorld extends JavaPlugin implements Listener {
         if (coordinates == null) {
             return;
         }
-        var locations = getLocations(coordinates, world);
+        var locations = getLocations(coordinates, player);
         if (locations == null) {
             return;
         }
@@ -118,44 +136,6 @@ public class SplitWorld extends JavaPlugin implements Listener {
                 return;
             }
         }
-    }
-
-    public List<Double> getCoordinates(String[] command_args) {
-        var args = new ArrayList<>(Arrays.asList(command_args));
-        var command = args.remove(0);
-        if (args.size() == 0) {
-                return null;
-        }
-        var coordinate_count = switch (command) {
-            case "/fill" -> 6;
-            case "/clone" -> 9;
-            case "/setblock" -> 3;
-            default -> -1;
-        };
-        if (coordinate_count == -1) {
-            return null;
-        }
-        if (args.size() < coordinate_count) {
-            return null;
-        }
-        List<Double> coordinates = new ArrayList<>();
-        for (int i = 0; i < coordinate_count; i++) {
-            coordinates.add(Double.parseDouble(args.get(i)));
-        }
-        return coordinates;
-    }
-
-    public List<Location> getLocations(List<Double> coordinates, World world) {
-        var size = coordinates.size();
-        if (size < 3 || size % 3 != 0) {
-            return null;
-        }
-        List<Location> locations = new ArrayList<>();
-        for (int i = 0; i < size / 3; i ++) {
-            var index = i * 3;
-            locations.add(new Location(world, coordinates.get(index), coordinates.get(index + 1), coordinates.get(index + 2)));
-        }
-        return locations;
     }
 
     @EventHandler
@@ -209,7 +189,12 @@ public class SplitWorld extends JavaPlugin implements Listener {
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent event) {
         var player = event.getPlayer();
+        var player_pdc = player.getPersistentDataContainer();
+        var disabled = player_pdc.get(split_world_disabled_key, PersistentDataType.INTEGER);
         convertBufferZoneBlocksAroundPlayer(player);
+        if (disabled != null && disabled == 1) {
+            return;
+        }
         if (warpIsRecommended(player)) {
             warpPlayerToGround(player);
         }
@@ -266,6 +251,51 @@ public class SplitWorld extends JavaPlugin implements Listener {
         if (locationInBufferZone(event.getItem().getLocation())) {
             event.setCancelled(true);
         }
+    }
+
+    public List<Double> getCoordinates(String[] command_args) {
+        var args = new ArrayList<>(Arrays.asList(command_args));
+        var command = args.remove(0);
+        if (args.size() == 0) {
+            return null;
+        }
+        var coordinate_count = switch (command) {
+            case "/fill" -> 6;
+            case "/clone" -> 9;
+            case "/setblock" -> 3;
+            default -> -1;
+        };
+        if (coordinate_count == -1) {
+            return null;
+        }
+        if (args.size() < coordinate_count) {
+            return null;
+        }
+        List<Double> coordinates = new ArrayList<>();
+        for (int i = 0; i < coordinate_count; i++) {
+            if (args.get(i).equals("~")) {
+                coordinates.add(null);
+            } else {
+                coordinates.add(Double.parseDouble(args.get(i)));
+            }
+        }
+        return coordinates;
+    }
+
+    public List<Location> getLocations(List<Double> coordinates, Player player) {
+        var size = coordinates.size();
+        if (size < 3 || size % 3 != 0) {
+            return null;
+        }
+        List<Location> locations = new ArrayList<>();
+        for (int i = 0; i < size / 3; i ++) {
+            var index = i * 3;
+            var x = coordinates.get(i) == null ? player.getLocation().getX() : coordinates.get(i);
+            var y = coordinates.get(i) == null ? player.getLocation().getY() : coordinates.get(i + 1);
+            var z = coordinates.get(i) == null ? player.getLocation().getZ() : coordinates.get(i + 2);
+            locations.add(new Location(player.getWorld(), x, y, z));
+        }
+        return locations;
     }
 
     public void convertBufferZoneBlocksAroundPlayer(Player player) {

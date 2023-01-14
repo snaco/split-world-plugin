@@ -1,5 +1,5 @@
 name: SplitWorld
-version: 2.0.9-ibt
+version: 2.0.10-ibt
 main: tech.snaco.SplitWorld.SplitWorld
 description: Splits the world into two game modes
 author: snaco
@@ -9,3 +9,12 @@ commands:
   understood:
     description: You understand the nature of the split world and don't want to see the welcome message anymore.
     usage: /understood
+    permission: split-world.understood
+  disable-split-world:
+    description: disables split world game mode switching
+    usage: /disable-split-world
+    permission: split-world.disable-split-world
+  enable-split-world:
+    description: enables split world game mode switching
+    usage: /enable-split-world
+    permission: split-world.enable-split-world
