@@ -19,6 +19,7 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.jetbrains.annotations.NotNull;
+import org.spigotmc.event.player.PlayerSpawnLocationEvent;
 import tech.snaco.SplitWorld.utils.ItemStackArrayDataType;
 import tech.snaco.SplitWorld.utils.WorldConfig;
 
@@ -35,6 +36,7 @@ public class SplitWorld extends JavaPlugin implements Listener {
     Map<String, WorldConfig> world_configs;
     NamespacedKey no_welcome_key = new NamespacedKey(this, "no_welcome_message");
     NamespacedKey split_world_disabled_key = new NamespacedKey(this, "split_world_disabled");
+    NamespacedKey first_join_key = new NamespacedKey(this, "split_world_first_join");
     ArrayList<Item> dropped_items = new ArrayList<>();
     int number_of_worlds_enabled;
     boolean manage_creative_commands;
@@ -217,7 +219,7 @@ public class SplitWorld extends JavaPlugin implements Listener {
     public void onPlayerRespawn(PlayerRespawnEvent event) {
         var custom_respawn = config.getBoolean("custom_respawn", false);
         var coordinates = Arrays.stream(config.getString("respawn_coordinates").split(" ")).map(Double::parseDouble).toList();
-        if (custom_respawn) {
+        if (custom_respawn && !event.isAnchorSpawn() && !event.isBedSpawn()) {
             event.setRespawnLocation(new Location(event.getPlayer().getWorld(), coordinates.get(0), coordinates.get(1), coordinates.get(2), -88, 6));
         }
     }
@@ -279,6 +281,18 @@ public class SplitWorld extends JavaPlugin implements Listener {
         }
     }
 
+    @EventHandler
+    public void onSpawn(PlayerSpawnLocationEvent event) {
+        var custom_respawn = config.getBoolean("custom_respawn", false);
+        var coordinates = Arrays.stream(config.getString("respawn_coordinates").split(" ")).map(Double::parseDouble).toList();
+        var player_pdc = event.getPlayer().getPersistentDataContainer();
+        var first_join = player_pdc.get(first_join_key, PersistentDataType.INTEGER);
+        if (custom_respawn && (first_join == null || first_join != 1)) {
+            player_pdc.set(first_join_key, PersistentDataType.INTEGER , 1);
+            event.setSpawnLocation(new Location(event.getPlayer().getWorld(), coordinates.get(0), coordinates.get(1), coordinates.get(2), -88, 6));
+        }
+    }
+
     public List<Double> getCoordinates(String[] command_args) {
         var args = new ArrayList<>(Arrays.asList(command_args));
         var command = args.remove(0);
@@ -316,9 +330,9 @@ public class SplitWorld extends JavaPlugin implements Listener {
         List<Location> locations = new ArrayList<>();
         for (int i = 0; i < size / 3; i ++) {
             var index = i * 3;
-            var x = coordinates.get(i) == null ? player.getLocation().getX() : coordinates.get(i);
-            var y = coordinates.get(i) == null ? player.getLocation().getY() : coordinates.get(i + 1);
-            var z = coordinates.get(i) == null ? player.getLocation().getZ() : coordinates.get(i + 2);
+            var x = coordinates.get(index) == null ? player.getLocation().getX() : coordinates.get(index);
+            var y = coordinates.get(index + 1) == null ? player.getLocation().getY() : coordinates.get(index + 1);
+            var z = coordinates.get(index + 2) == null ? player.getLocation().getZ() : coordinates.get(index + 2);
             locations.add(new Location(player.getWorld(), x, y, z));
         }
         return locations;
