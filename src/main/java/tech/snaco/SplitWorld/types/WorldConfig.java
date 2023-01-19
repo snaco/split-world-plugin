@@ -1,4 +1,4 @@
-package tech.snaco.SplitWorld.utils;
+package tech.snaco.SplitWorld.types;
 
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.jetbrains.annotations.NotNull;

@@ -21,9 +21,9 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.jetbrains.annotations.NotNull;
 import org.spigotmc.event.player.PlayerSpawnLocationEvent;
-import tech.snaco.SplitWorld.utils.ItemStackArrayDataType;
-import tech.snaco.SplitWorld.utils.PotionEffectArrayDataType;
-import tech.snaco.SplitWorld.utils.WorldConfig;
+import tech.snaco.SplitWorld.types.ItemStackArrayDataType;
+import tech.snaco.SplitWorld.types.PotionEffectArrayDataType;
+import tech.snaco.SplitWorld.types.WorldConfig;
 import org.bukkit.util.Vector;
 
 import java.util.*;
