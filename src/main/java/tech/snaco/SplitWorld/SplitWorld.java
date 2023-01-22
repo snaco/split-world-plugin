@@ -1,6 +1,8 @@
 package tech.snaco.SplitWorld;
 
 
+import com.destroystokyo.paper.event.entity.EndermanEscapeEvent;
+import io.papermc.paper.event.block.BlockBreakBlockEvent;
 import io.papermc.paper.event.entity.EntityMoveEvent;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
@@ -10,11 +12,13 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockFromToEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.ItemSpawnEvent;
 import org.bukkit.event.player.*;
+import org.bukkit.event.world.PortalCreateEvent;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
@@ -37,6 +41,7 @@ public class SplitWorld extends JavaPlugin implements Listener {
     NamespacedKey no_welcome_key = new NamespacedKey(this, "no_welcome_message");
     NamespacedKey split_world_disabled_key = new NamespacedKey(this, "split_world_disabled");
     NamespacedKey first_join_key = new NamespacedKey(this, "split_world_first_join");
+    NamespacedKey first_fish_attempt = new NamespacedKey(this, "first_fish_attempt");
     ArrayList<Item> dropped_items = new ArrayList<>();
     int number_of_worlds_enabled;
     boolean manage_creative_commands;
@@ -171,12 +176,21 @@ public class SplitWorld extends JavaPlugin implements Listener {
                     + "This world is split! You can head over towards the " + world_config.creative_side
                     + " side of the border at " + world_config.border_axis + "=" + world_config.border_location
                     + " to enter the creative side of the world. Your inventory will automatically be saved"
-                    + " and loaded whenever you cross the border. Have fun!"));
+                    + " and loaded whenever you cross the border. Have fun! (To disable this message use /understood)"));
         }
     }
 
     @EventHandler
     public void onPlace(BlockPlaceEvent event) {
+        if (!worldEnabled(event.getBlock().getWorld())) { return; }
+        if (locationInBufferZone(event.getBlock().getLocation())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onBreak(BlockBreakEvent event) {
+        if (!worldEnabled(event.getBlock().getWorld())) { return; }
         if (locationInBufferZone(event.getBlock().getLocation())) {
             event.setCancelled(true);
         }
@@ -187,21 +201,29 @@ public class SplitWorld extends JavaPlugin implements Listener {
         var destination = event.getTo();
         var player = event.getPlayer();
 
+        if (!worldEnabled(destination.getWorld())) {
+            switchPlayerGameMode(player, default_game_mode);
+            return;
+        }
+
         if (locationInBufferZone(destination)) {
             switchPlayerGameMode(player, GameMode.SPECTATOR);
+            return;
         } else if (locationOnCreativeSide(destination)) {
             switchPlayerGameMode(player, GameMode.CREATIVE);
-        } else {
-            var needs_warp = player.getGameMode() != GameMode.SURVIVAL;
-            switchPlayerGameMode(player, GameMode.SURVIVAL);
-            if (needs_warp) {
-                warpPlayerToGround(player, new Vector(0, 0, 0));
-            }
+            return;
+        }
+
+        var needs_warp = player.getGameMode() != GameMode.SURVIVAL;
+        switchPlayerGameMode(player, GameMode.SURVIVAL);
+        if (needs_warp) {
+            warpPlayerToGround(player, new Vector(0, 0, 0));
         }
     }
 
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent event) {
+        if (!worldEnabled(event.getPlayer().getWorld())) { return; }
         var player = event.getPlayer();
         var player_pdc = player.getPersistentDataContainer();
         var disabled = player_pdc.get(split_world_disabled_key, PersistentDataType.INTEGER);
@@ -224,6 +246,24 @@ public class SplitWorld extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onPlayerWorldChange(PlayerChangedWorldEvent event) {
+        if (!worldEnabled(event.getPlayer().getWorld())) {
+            return;
+        }
+        var player = event.getPlayer();
+        if (playerOnCreativeSide(player)) {
+            for (int x = -5; x < 5; x++) {
+                for (int y = -5; y < 5; y++) {
+                    for (int z = -5; z < 5; z++) {
+                        var loc = player.getLocation().clone();
+                        var new_loc = loc.add(x, y, z);
+                        var block = player.getWorld().getBlockAt(new_loc);
+                        if (block.getType() == Material.NETHER_PORTAL) {
+                            block.setType(Material.AIR);
+                        }
+                    }
+                }
+            }
+        }
         switchPlayerToConfiguredGameMode(event.getPlayer());
     }
 
@@ -238,14 +278,34 @@ public class SplitWorld extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onBlockFromTo(BlockFromToEvent event) {
-        if (worldEnabled(event.getBlock().getWorld()) && locationInBufferZone(event.getToBlock().getLocation())) {
+        if (!worldEnabled(event.getBlock().getWorld())) { return; }
+        if (locationInBufferZone(event.getToBlock().getLocation())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void portalCreatedEvent(PortalCreateEvent event) {
+        if (!worldEnabled(event.getWorld())) { return; }
+        // No portals on creative side please
+        if (locationOnCreativeSide(event.getEntity().getLocation())) {
             event.setCancelled(true);
         }
     }
 
     @EventHandler
     public void onItemSpawn(ItemSpawnEvent event) {
+        if (!worldEnabled(event.getEntity().getWorld())) { return; }
         dropped_items.add(event.getEntity());
+    }
+
+    @EventHandler
+    public void onEndermanEscape(EndermanEscapeEvent event) {
+        if (!worldEnabled(event.getEntity().getWorld())) { return; }
+
+        if (locationOnCreativeSide(event.getEntity().getLocation())) {
+            event.setCancelled(true);
+        }
     }
 
     @EventHandler
@@ -254,31 +314,31 @@ public class SplitWorld extends JavaPlugin implements Listener {
         var entity_location = event.getTo();
         var entity_world_name = entity_location.getWorld().getName();
 
-        // Only do for monsters
-        if (!(entity instanceof Monster)) { return; }
-        // Make sure it's in an enabled world
-        if (!world_configs.containsKey(entity_world_name) || !world_configs.get(entity_world_name).enabled) { return; }
+        if (!worldEnabled(entity.getWorld())) { return; }
         // only do this if players are online
         if (entity.getServer().getOnlinePlayers().size() == 0) { return; }
-        // no monsters in creative side
-        if (locationOnCreativeSide(entity_location) && worldEnabled(entity.getWorld()) && getWorldConfig(entity.getWorld()).no_creative_monsters) {
-            entity.remove();
-            return;
-        }
+        // Make sure it's in an enabled world
+        if (!world_configs.containsKey(entity_world_name) || !world_configs.get(entity_world_name).enabled) { return; }
         // don't affect monster's not trying to move in to the buffer zone
         if (!locationInBufferZone(entity_location)) {
             return;
         }
-        // Stop it, don't go there. The buffer zone is forbidden to monsters.
-        event.setCancelled(true);
+        // stop no crossing unless you are a player
+        if (locationOnCreativeSide(entity.getLocation()) && !locationOnCreativeSide(entity_location) && !(entity instanceof Player)) {
+            event.setCancelled(true);
+        }
+        // no monsters in creative side
+        if (entity instanceof Monster && locationOnCreativeSide(entity_location) && worldEnabled(entity.getWorld()) && getWorldConfig(entity.getWorld()).no_creative_monsters) {
+            entity.remove();
+        }
     }
 
     @EventHandler
     public void onCreatureSpawn(CreatureSpawnEvent event) {
         var world = event.getLocation().getWorld();
+        if (!worldEnabled(world)) { return; }
         if (!locationOnSurvivalSide(event.getLocation())
                 && event.getSpawnReason() == CreatureSpawnEvent.SpawnReason.NATURAL
-                && worldEnabled(world)
                 && getWorldConfig(world).no_creative_monsters
                 && event.getEntity() instanceof Monster
         ) {
@@ -288,6 +348,7 @@ public class SplitWorld extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onPickup(PlayerAttemptPickupItemEvent event) {
+        if (!worldEnabled(event.getPlayer().getWorld())) { return; }
         if (locationInBufferZone(event.getItem().getLocation())) {
             event.setCancelled(true);
         }
@@ -303,6 +364,30 @@ public class SplitWorld extends JavaPlugin implements Listener {
             player_pdc.set(first_join_key, PersistentDataType.INTEGER , 1);
             event.setSpawnLocation(new Location(event.getPlayer().getWorld(), coordinates.get(0), coordinates.get(1), coordinates.get(2), -88, 6));
         }
+    }
+
+    @EventHandler
+    public void onPlayerFish(PlayerFishEvent event) {
+        if (!worldEnabled(event.getPlayer().getWorld())) { return; }
+
+        // no fishing creative stuff to survival side
+        var caught = event.getCaught();
+        if (caught == null) {
+            return;
+        }
+
+        if (!locationOnSurvivalSide(caught.getLocation()) && !locationOnCreativeSide(event.getPlayer().getLocation())) {
+            event.setCancelled(true);
+        }
+
+        //snark
+        var player_pdc = event.getPlayer().getPersistentDataContainer();
+        var first_attempt = player_pdc.get(first_fish_attempt, PersistentDataType.INTEGER);
+        if (first_attempt == null) {
+            event.getPlayer().giveExp(100);
+            player_pdc.set(first_fish_attempt, PersistentDataType.INTEGER, 1);
+        }
+        event.getPlayer().sendMessage("Nice try.");
     }
 
     /* Player Management */
