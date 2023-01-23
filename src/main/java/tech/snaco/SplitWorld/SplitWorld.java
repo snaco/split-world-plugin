@@ -37,10 +37,8 @@ public class SplitWorld extends JavaPlugin implements Listener {
     Map<String, WorldConfig> world_configs;
     SplitWorldKeys keys = new SplitWorldKeys(this);
     ArrayList<Item> dropped_items = new ArrayList<>();
-    int number_of_worlds_enabled;
-    boolean manage_creative_commands;
-
-    SplitWorldCommands commandHandler = new SplitWorldCommands(keys);
+    SplitWorldCommands commandHandler = new SplitWorldCommands(keys, world_configs, config.getBoolean("manage_creative_commands", true));
+    Utils utils = new Utils(world_configs);
 
     @Override
     public void onEnable() {
@@ -53,15 +51,13 @@ public class SplitWorld extends JavaPlugin implements Listener {
         };
         world_configs = config.getList("world_configs").stream().map(item -> new WorldConfig((Map<String, Object>) item)).collect(Collectors.toMap(WorldConfig::getWorldName, item -> item));
         Bukkit.getPluginManager().registerEvents(this, this);
-        number_of_worlds_enabled = world_configs.values().stream().filter(world -> world.enabled).toList().size();
-        manage_creative_commands = config.getBoolean("manage_creative_commands", true);
         new BukkitRunnable() {
             @Override
             public void run() {
                 if ((long) dropped_items.size() > 0) {
                     var items_to_remove = new ArrayList<Item>();
                     for (Item item : dropped_items) {
-                        if (worldEnabled(item.getWorld()) && locationInBufferZone(item.getLocation())) {
+                        if (utils.worldEnabled(item.getWorld()) && utils.locationInBufferZone(item.getLocation())) {
                             item.remove();
                             items_to_remove.add(item);
                         }
@@ -72,70 +68,23 @@ public class SplitWorld extends JavaPlugin implements Listener {
         }.runTaskTimer(this, 0, 1L);
     }
 
+    /* Commands */
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, String[] args) {
-       return commandHandler.onCommand(sender, command, label, args);
+       return commandHandler.onCommand(sender, command, args);
     }
 
     @Override
     public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, String[] args) {
-        return commandHandler.onTabComplete(sender, command, label, args);
+        return commandHandler.onTabComplete(command, args);
     }
-    /* Event Handlers */
 
     @EventHandler
     public void preProcessCommand(PlayerCommandPreprocessEvent event) {
-        if (!manage_creative_commands || event.getPlayer().isOp()) {
-            return;
-        }
-
-        // creative commands allowed in the creative zones, these will be blocked in survival mode
-        var creative_commands = List.of("/fill", "/clone", "/setblock");
-        var player = event.getPlayer();
-        var command_str = event.getMessage();
-        var command_args = command_str.split(" ");
-        if (command_args.length < 3) {
-            return;
-        }
-
-        // if not in managed creative commands, return to allow normal server handling of the event.
-        if (!creative_commands.contains(command_args[0])) {
-            return;
-        }
-
-        // block creative command in survival
-        if (player.getGameMode() == GameMode.SURVIVAL) {
-            player.sendMessage("You cannot use the " + command_args[0] + " command in survival.");
-            event.setCancelled(true);
-            return;
-        }
-        var coordinates = getCoordinates(command_args);
-
-        // no coordinates in command args
-        if (coordinates == null) {
-            return;
-        }
-        var locations = getLocations(coordinates, player);
-
-        // invalid number of arguments
-        if (locations == null) {
-            return;
-        }
-
-        for (var location : locations) {
-            if (!locationOnCreativeSide(location)) {
-                if (number_of_worlds_enabled > 1) {
-                    player.sendMessage("The " + command_args[0] + " command cannot include blocks outside the creative sides of split worlds");
-                    event.setCancelled(true);
-                } else if (number_of_worlds_enabled == 1) {
-                    player.sendMessage("The " + command_args[0] + " command cannot include blocks outside the creative side of the split world");
-                    event.setCancelled(true);
-                }
-                // we don't need to evaluate any more locations after finding one out of bounds
-                return;
-            }
-        }
+        commandHandler.preProcessCommand(event);
     }
+
+    /* TBD */
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
@@ -147,20 +96,20 @@ public class SplitWorld extends JavaPlugin implements Listener {
         var player_pdc = player.getPersistentDataContainer();
 
         //track who participated in the competition
-        var is_competition_ended = player.getWorld().getPersistentDataContainer().get(keys.getCompetitionEnded(), PersistentDataType.INTEGER);
+        var is_competition_ended = player.getWorld().getPersistentDataContainer().get(keys.getCompetition_ended(), PersistentDataType.INTEGER);
         if (is_competition_ended == null || is_competition_ended == 0) {
-            var is_participant = player_pdc.get(keys.getCompetitionParticipant(), PersistentDataType.INTEGER);
+            var is_participant = player_pdc.get(keys.getCompetition_participant(), PersistentDataType.INTEGER);
             if (is_participant == null) {
-                player_pdc.set(keys.getCompetitionParticipant(), PersistentDataType.INTEGER, 1);
+                player_pdc.set(keys.getCompetition_participant(), PersistentDataType.INTEGER, 1);
             }
         }
 
         var world_name = player.getWorld().getName();
-        var no_welcome = player_pdc.get(keys.getNoWelcome(), PersistentDataType.INTEGER);
+        var no_welcome = player_pdc.get(keys.getNo_welcome(), PersistentDataType.INTEGER);
         if (!world_configs.containsKey(world_name) || !world_configs.get(world_name).enabled) {
             return;
         }
-        var world_config = getWorldConfig(player.getWorld());
+        var world_config = utils.getWorldConfig(player.getWorld());
         if (no_welcome == null) {
             player.sendMessage(Component.text("Hello " + player.getName() + "! "
                     + "This world is split! You can head over towards the " + world_config.creative_side
@@ -172,19 +121,19 @@ public class SplitWorld extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onPlace(BlockPlaceEvent event) {
-        if (!worldEnabled(event.getBlock().getWorld())) { return; }
-        if (locationInBufferZone(event.getBlock().getLocation())) {
+        if (!utils.worldEnabled(event.getBlock().getWorld())) { return; }
+        if (utils.locationInBufferZone(event.getBlock().getLocation())) {
             event.setCancelled(true);
         }
-        if (locationOnSurvivalSide(event.getBlock().getLocation()) && locationInBufferZone(event.getPlayer().getLocation())) {
+        if (utils.locationOnSurvivalSide(event.getBlock().getLocation()) && utils.locationInBufferZone(event.getPlayer().getLocation())) {
             event.setCancelled(true);
         }
     }
 
     @EventHandler
     public void onDeath(PlayerDeathEvent event) {
-        if (!worldEnabled(event.getPlayer().getWorld())) { return; }
-        if (locationInBufferZone(event.getPlayer().getLocation())) {
+        if (!utils.worldEnabled(event.getPlayer().getWorld())) { return; }
+        if (utils.locationInBufferZone(event.getPlayer().getLocation())) {
             event.getPlayer().setHealth(0.1);
             event.setCancelled(true);
         }
@@ -192,19 +141,19 @@ public class SplitWorld extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onHealthRegain(EntityRegainHealthEvent event) {
-        if (!worldEnabled(event.getEntity().getWorld())) { return; }
-        if (locationInBufferZone(event.getEntity().getLocation())) {
+        if (!utils.worldEnabled(event.getEntity().getWorld())) { return; }
+        if (utils.locationInBufferZone(event.getEntity().getLocation())) {
             event.setCancelled(true);
         }
     }
 
     @EventHandler
     public void onBreak(BlockBreakEvent event) {
-        if (!worldEnabled(event.getBlock().getWorld())) { return; }
-        if (locationInBufferZone(event.getBlock().getLocation())) {
+        if (!utils.worldEnabled(event.getBlock().getWorld())) { return; }
+        if (utils.locationInBufferZone(event.getBlock().getLocation())) {
             event.setCancelled(true);
         }
-        if (locationOnSurvivalSide(event.getBlock().getLocation()) && locationInBufferZone(event.getPlayer().getLocation())) {
+        if (utils.locationOnSurvivalSide(event.getBlock().getLocation()) && utils.locationInBufferZone(event.getPlayer().getLocation())) {
             event.setCancelled(true);
         }
     }
@@ -214,15 +163,15 @@ public class SplitWorld extends JavaPlugin implements Listener {
         var destination = event.getTo();
         var player = event.getPlayer();
 
-        if (!worldEnabled(destination.getWorld())) {
+        if (!utils.worldEnabled(destination.getWorld())) {
             switchPlayerGameMode(player, default_game_mode);
             return;
         }
 
-        if (locationInBufferZone(destination)) {
+        if (utils.locationInBufferZone(destination)) {
             switchPlayerGameMode(player, GameMode.SPECTATOR);
             return;
-        } else if (locationOnCreativeSide(destination)) {
+        } else if (utils.locationOnCreativeSide(destination)) {
             switchPlayerGameMode(player, GameMode.CREATIVE);
             return;
         }
@@ -236,16 +185,16 @@ public class SplitWorld extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent event) {
-        if (!worldEnabled(event.getPlayer().getWorld())) { return; }
+        if (!utils.worldEnabled(event.getPlayer().getWorld())) { return; }
         var player = event.getPlayer();
         var player_pdc = player.getPersistentDataContainer();
-        var disabled = player_pdc.get(keys.getSplitWorldDisabled(), PersistentDataType.INTEGER);
+        var disabled = player_pdc.get(keys.getSplit_world_disabled(), PersistentDataType.INTEGER);
         if (disabled != null && disabled == 1) {
             return;
         }
 
         // handle transitioning to survival safely
-        if (player.getGameMode() != GameMode.SURVIVAL && locationOnSurvivalSide(event.getTo()) && locationOnSurvivalSide(player.getLocation())) {
+        if (player.getGameMode() != GameMode.SURVIVAL && utils.locationOnSurvivalSide(event.getTo()) && utils.locationOnSurvivalSide(player.getLocation())) {
             // temporarily load survival inv to check equip status
             loadPlayerInventory(player, GameMode.SURVIVAL);
             var player_has_elytra_equipped = player.getInventory().getChestplate() != null && player.getInventory().getChestplate().getType() == Material.ELYTRA;
@@ -253,15 +202,16 @@ public class SplitWorld extends JavaPlugin implements Listener {
             if (player_has_elytra_equipped && player.getLocation().getBlock().getType() == Material.AIR) {
                 player.setGliding(true);
             }
-            if (!player_has_elytra_equipped && locationOnSurvivalSide(player.getLocation()) && !player.isOnGround()) {
+            //noinspection deprecation
+            if (!player_has_elytra_equipped && utils.locationOnSurvivalSide(player.getLocation()) && !player.isOnGround()) {
                 warpPlayerToGround(player, event.getTo());
             }
         }
         switchPlayerToConfiguredGameMode(player);
-        if (playerInBufferZone(player)) {
+        if (utils.playerInBufferZone(player)) {
             player.getInventory().clear();
             var next_location = event.getTo();
-            if (!locationIsTraversable(next_location)) {
+            if (!utils.locationIsTraversable(next_location)) {
                 event.setCancelled(true);
             }
         }
@@ -270,7 +220,7 @@ public class SplitWorld extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onPlayerWorldChange(PlayerChangedWorldEvent event) {
-        if (!worldEnabled(event.getPlayer().getWorld())) {
+        if (!utils.worldEnabled(event.getPlayer().getWorld())) {
             return;
         }
         switchPlayerToConfiguredGameMode(event.getPlayer());
@@ -287,38 +237,38 @@ public class SplitWorld extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onBlockFromTo(BlockFromToEvent event) {
-        if (!worldEnabled(event.getBlock().getWorld())) { return; }
-        if (locationInBufferZone(event.getToBlock().getLocation())) {
+        if (!utils.worldEnabled(event.getBlock().getWorld())) { return; }
+        if (utils.locationInBufferZone(event.getToBlock().getLocation())) {
             event.setCancelled(true);
         }
     }
 
     @EventHandler
     public void onEntityPortal(EntityPortalEvent event) {
-        if (!worldEnabled(event.getFrom().getWorld())) { return; }
-        if (locationOnCreativeSide(event.getFrom())) {
+        if (!utils.worldEnabled(event.getFrom().getWorld())) { return; }
+        if (utils.locationOnCreativeSide(event.getFrom())) {
             event.setCancelled(true);
         }
     }
 
     @EventHandler
     public void onItemSpawn(ItemSpawnEvent event) {
-        if (!worldEnabled(event.getEntity().getWorld())) { return; }
+        if (!utils.worldEnabled(event.getEntity().getWorld())) { return; }
         dropped_items.add(event.getEntity());
     }
 
     @EventHandler
     public void onEndermanEscape(EndermanEscapeEvent event) {
-        if (!worldEnabled(event.getEntity().getWorld())) { return; }
+        if (!utils.worldEnabled(event.getEntity().getWorld())) { return; }
 
-        if (locationOnCreativeSide(event.getEntity().getLocation())) {
+        if (utils.locationOnCreativeSide(event.getEntity().getLocation())) {
             event.setCancelled(true);
         }
     }
 
     @EventHandler
     public void onEntityMove(EntityMoveEvent event) {
-        if (!worldEnabled(event.getEntity().getWorld())) { return; }
+        if (!utils.worldEnabled(event.getEntity().getWorld())) { return; }
 
         var entity = event.getEntity();
         var entity_next_location = event.getTo();
@@ -332,20 +282,20 @@ public class SplitWorld extends JavaPlugin implements Listener {
         if (!world_configs.containsKey(entity_world_name) || !world_configs.get(entity_world_name).enabled) { return; }
 
         // stop no crossing unless you are a player
-        if (locationInBufferZone(entity_next_location)) {
+        if (utils.locationInBufferZone(entity_next_location)) {
             event.setCancelled(true);
         }
 
         // only monsters on survival side
-        if (entity instanceof Monster && locationOnCreativeSide(entity_next_location) && getWorldConfig(entity.getWorld()).no_creative_monsters) {
+        if (entity instanceof Monster && utils.locationOnCreativeSide(entity_next_location) && utils.getWorldConfig(entity.getWorld()).no_creative_monsters) {
             entity.remove();
         }
     }
 
     @EventHandler
     public void onTarget(EntityTargetLivingEntityEvent event) {
-        if (!worldEnabled(event.getEntity().getWorld())) { return; }
-        if (event.getTarget() instanceof Player && !locationOnSurvivalSide(event.getTarget().getLocation())) {
+        if (!utils.worldEnabled(event.getEntity().getWorld())) { return; }
+        if (event.getTarget() instanceof Player && !utils.locationOnSurvivalSide(event.getTarget().getLocation())) {
             event.setCancelled(true);
         }
     }
@@ -353,10 +303,10 @@ public class SplitWorld extends JavaPlugin implements Listener {
     @EventHandler
     public void onCreatureSpawn(CreatureSpawnEvent event) {
         var world = event.getLocation().getWorld();
-        if (!worldEnabled(world)) { return; }
-        if (!locationOnSurvivalSide(event.getLocation())
+        if (!utils.worldEnabled(world)) { return; }
+        if (!utils.locationOnSurvivalSide(event.getLocation())
                 && event.getSpawnReason() == CreatureSpawnEvent.SpawnReason.NATURAL
-                && getWorldConfig(world).no_creative_monsters
+                && utils.getWorldConfig(world).no_creative_monsters
                 && event.getEntity() instanceof Monster
         ) {
             event.setCancelled(true);
@@ -365,8 +315,8 @@ public class SplitWorld extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onPickup(PlayerAttemptPickupItemEvent event) {
-        if (!worldEnabled(event.getPlayer().getWorld())) { return; }
-        if (locationInBufferZone(event.getItem().getLocation())) {
+        if (!utils.worldEnabled(event.getPlayer().getWorld())) { return; }
+        if (utils.locationInBufferZone(event.getItem().getLocation())) {
             event.setCancelled(true);
         }
     }
@@ -376,16 +326,16 @@ public class SplitWorld extends JavaPlugin implements Listener {
         var custom_respawn = config.getBoolean("custom_respawn", false);
         var coordinates = Arrays.stream(config.getString("respawn_coordinates").split(" ")).map(Double::parseDouble).toList();
         var player_pdc = event.getPlayer().getPersistentDataContainer();
-        var first_join = player_pdc.get(keys.getFirstJoin(), PersistentDataType.INTEGER);
+        var first_join = player_pdc.get(keys.getFirst_join(), PersistentDataType.INTEGER);
         if (custom_respawn && (first_join == null || first_join != 1)) {
-            player_pdc.set(keys.getFirstJoin(), PersistentDataType.INTEGER , 1);
+            player_pdc.set(keys.getFirst_join(), PersistentDataType.INTEGER , 1);
             event.setSpawnLocation(new Location(event.getPlayer().getWorld(), coordinates.get(0), coordinates.get(1), coordinates.get(2), -88, 6));
         }
     }
 
     @EventHandler
     public void onPlayerFish(PlayerFishEvent event) {
-        if (!worldEnabled(event.getPlayer().getWorld())) { return; }
+        if (!utils.worldEnabled(event.getPlayer().getWorld())) { return; }
 
         // no fishing creative stuff to survival side
         var caught = event.getCaught();
@@ -393,24 +343,24 @@ public class SplitWorld extends JavaPlugin implements Listener {
             return;
         }
 
-        if (!locationOnSurvivalSide(caught.getLocation()) && !locationOnCreativeSide(event.getPlayer().getLocation())) {
+        if (!utils.locationOnSurvivalSide(caught.getLocation()) && !utils.locationOnCreativeSide(event.getPlayer().getLocation())) {
             event.setCancelled(true);
         }
 
         //snark
         var player_pdc = event.getPlayer().getPersistentDataContainer();
-        var first_attempt = player_pdc.get(keys.getFirstFishAttempt(), PersistentDataType.INTEGER);
+        var first_attempt = player_pdc.get(keys.getFirst_fish_attempt(), PersistentDataType.INTEGER);
         if (first_attempt == null) {
             event.getPlayer().giveExp(100);
-            player_pdc.set(keys.getFirstFishAttempt(), PersistentDataType.INTEGER, 1);
+            player_pdc.set(keys.getFirst_fish_attempt(), PersistentDataType.INTEGER, 1);
         }
         event.getPlayer().sendMessage("Nice try.");
     }
 
     @EventHandler
     public void playerHunger(FoodLevelChangeEvent event) {
-        if (!worldEnabled(event.getEntity().getWorld())) { return; }
-        if (event.getEntity() instanceof Player && locationInBufferZone(event.getEntity().getLocation())) {
+        if (!utils.worldEnabled(event.getEntity().getWorld())) { return; }
+        if (event.getEntity() instanceof Player && utils.locationInBufferZone(event.getEntity().getLocation())) {
             event.setCancelled(true);
         }
     }
@@ -419,12 +369,12 @@ public class SplitWorld extends JavaPlugin implements Listener {
 
     public void switchPlayerToConfiguredGameMode(Player player) {
         // keep players in the default mode when disabled for the world
-        if (!worldEnabled(player.getWorld())) {
+        if (!utils.worldEnabled(player.getWorld())) {
             switchPlayerGameMode(player, default_game_mode);
             return;
         }
         // set to spectator for buffer zone
-        if (playerInBufferZone(player)) {
+        if (utils.playerInBufferZone(player)) {
             var set_flying = player.isGliding() || player.isFlying();
             switchPlayerGameMode(player, GameMode.ADVENTURE);
             player.setAllowFlight(true);
@@ -436,7 +386,7 @@ public class SplitWorld extends JavaPlugin implements Listener {
             player.setFoodLevel(player.getFoodLevel());
             player.setHealth(player.getHealth());
         // creative side
-        } else if (playerOnCreativeSide(player)) {
+        } else if (utils.playerOnCreativeSide(player)) {
             switchPlayerGameMode(player, GameMode.CREATIVE);
         // survival side
         } else {
@@ -448,7 +398,7 @@ public class SplitWorld extends JavaPlugin implements Listener {
         var player_inv = player.getInventory();
         var player_pdc = player.getPersistentDataContainer();
         if (player.getGameMode() != game_mode) {
-            var play_sound = player_pdc.get(keys.getPlayBorderSound(), PersistentDataType.INTEGER);
+            var play_sound = player_pdc.get(keys.getPlay_border_sound(), PersistentDataType.INTEGER);
             if (play_sound == null || play_sound == 1) {
                 player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_COW_BELL, 1.0f, 0.5f);
             }
@@ -489,15 +439,15 @@ public class SplitWorld extends JavaPlugin implements Listener {
 
     public void savePlayerInventory(Player player) {
         var player_pdc = player.getPersistentDataContainer();
-        var inv_key = getPlayerInventoryKey(player, player.getGameMode());
-        var eff_key = getPlayerEffectsKey(player, player.getGameMode());
+        var inv_key = keys.getPlayerInventoryKey(player, player.getGameMode());
+        var eff_key = keys.getPlayerEffectsKey(player, player.getGameMode());
         player_pdc.set(inv_key, new ItemStackArrayDataType(), player.getInventory().getContents());
         player_pdc.set(eff_key, new PotionEffectArrayDataType(), player.getActivePotionEffects().toArray(PotionEffect[]::new));
     }
 
     public void loadPlayerInventory(Player player, GameMode game_mode) {
-        var inv_key = getPlayerInventoryKey(player, game_mode);
-        var eff_key = getPlayerEffectsKey(player, game_mode);
+        var inv_key = keys.getPlayerInventoryKey(player, game_mode);
+        var eff_key = keys.getPlayerEffectsKey(player, game_mode);
         var player_pdc = player.getPersistentDataContainer();
         var new_inv = player_pdc.get(inv_key, new ItemStackArrayDataType());
         var effects = player_pdc.get(eff_key, new PotionEffectArrayDataType());
@@ -516,7 +466,7 @@ public class SplitWorld extends JavaPlugin implements Listener {
 
     public void convertBufferZoneBlocksAroundPlayer(Player player) {
         var world = player.getWorld();
-        var world_config = getWorldConfig(world);
+        var world_config = utils.getWorldConfig(world);
         var player_location = player.getLocation().clone();
 
         for (int i = world_config.border_location - (world_config.border_width / 2); i < world_config.border_location + (world_config.border_width / 2); i++) {
@@ -542,64 +492,6 @@ public class SplitWorld extends JavaPlugin implements Listener {
         }
     }
 
-    /* Location Methods */
-
-    public boolean playerOnCreativeSide(Player player) {
-        return locationOnCreativeSide(player.getLocation());
-    }
-
-    public boolean locationOnCreativeSide(Location location) {
-        var world_config = getWorldConfig(location.getWorld());
-        if (world_config.creative_side.equals("negative") && locationOnNegativeSideOfBuffer(location)) {
-            return true;
-        } else return world_config.creative_side.equals("positive") && locationOnPositiveSideOfBuffer(location);
-    }
-
-    public boolean locationOnSurvivalSide(Location location) {
-        var world_config = getWorldConfig(location.getWorld());
-        if (world_config.creative_side.equals("negative") && locationOnPositiveSideOfBuffer(location)) {
-            return  true;
-        } else return world_config.creative_side.equals("positive") && locationOnNegativeSideOfBuffer(location);
-    }
-
-    public boolean playerInBufferZone(Player player) {
-        return locationInBufferZone(player.getLocation());
-    }
-
-    public boolean locationInBufferZone(Location location) {
-        var pos = getRelevantPos(location);
-        var world_config = getWorldConfig(location.getWorld());
-        return pos >= world_config.border_location - (world_config.border_width / 2.0)
-            && pos < world_config.border_location + (world_config.border_width / 2.0);
-    }
-
-    public boolean locationOnPositiveSideOfBuffer(Location location) {
-        var world_config = getWorldConfig(location.getWorld());
-        var pos = getRelevantPos(location);
-        return pos >= world_config.border_location + (world_config.border_width / 2.0);
-    }
-
-    public boolean locationOnNegativeSideOfBuffer(Location location) {
-        var world_config = getWorldConfig(location.getWorld());
-        var pos = getRelevantPos(location);
-        return pos < world_config.border_location - (world_config.border_width / 2.0);
-    }
-
-    public boolean locationIsTraversable(Location location) {
-        var world = location.getWorld();
-        var block_type = world.getBlockAt(location).getType();
-        return !block_type.isSolid();
-    }
-
-    public double getRelevantPos(Location location) {
-        var world_config = getWorldConfig(location.getWorld());
-        return switch (world_config.border_axis.toUpperCase()) {
-            case "Y" -> location.getY();
-            case "Z" -> location.getZ();
-            default -> location.getX();
-        };
-    }
-
     public void warpPlayerToGround(Player player, Location to_location) {
         var location = to_location.clone();
         var top = player.getWorld().getHighestBlockAt(location.getBlockX(), location.getBlockZ());
@@ -610,81 +502,4 @@ public class SplitWorld extends JavaPlugin implements Listener {
         destination.setYaw(yaw);
         player.teleport(destination);
     }
-
-    /* Misc. Utils */
-
-    public WorldConfig getWorldConfig(World world) {
-        return world_configs.get(world.getName());
-    }
-
-    public boolean worldEnabled(World world) {
-        var world_name = world.getName();
-        return world_configs.containsKey(world_name) && world_configs.get(world_name).enabled;
-    }
-
-    public NamespacedKey getPlayerInventoryKey(Player player, GameMode game_mode) {
-        return switch (game_mode) {
-            case CREATIVE -> new NamespacedKey(this, player.getName() + "_creative_inv");
-            case SURVIVAL -> new NamespacedKey(this, player.getName() + "_survival_inv");
-            case ADVENTURE -> new NamespacedKey(this, player.getName() + "_adventure_inv");
-            case SPECTATOR -> new NamespacedKey(this, player.getName() + "_spectator_inv");
-        };
-    }
-
-    public NamespacedKey getPlayerEffectsKey(Player player, GameMode game_mode) {
-        return switch (game_mode) {
-            case CREATIVE -> new NamespacedKey(this, player.getName() + "_creative_eff");
-            case SURVIVAL -> new NamespacedKey(this, player.getName() + "_survival_eff");
-            case ADVENTURE -> new NamespacedKey(this, player.getName() + "_adventure_eff");
-            case SPECTATOR -> new NamespacedKey(this, player.getName() + "_spectator_eff");
-        };
-    }
-
-    /* Command location parser */
-
-    public List<Double> getCoordinates(String[] command_args) {
-        var args = new ArrayList<>(Arrays.asList(command_args));
-        var command = args.remove(0);
-        if (args.size() == 0) {
-            return null;
-        }
-        var coordinate_count = switch (command) {
-            case "/fill" -> 6;
-            case "/clone" -> 9;
-            case "/setblock" -> 3;
-            default -> -1;
-        };
-        if (coordinate_count == -1) {
-            return null;
-        }
-        if (args.size() < coordinate_count) {
-            return null;
-        }
-        List<Double> coordinates = new ArrayList<>();
-        for (int i = 0; i < coordinate_count; i++) {
-            if (args.get(i).equals("~")) {
-                coordinates.add(null);
-            } else {
-                coordinates.add(Double.parseDouble(args.get(i)));
-            }
-        }
-        return coordinates;
-    }
-
-    public List<Location> getLocations(List<Double> coordinates, Player player) {
-        var size = coordinates.size();
-        if (size < 3 || size % 3 != 0) {
-            return null;
-        }
-        List<Location> locations = new ArrayList<>();
-        for (int i = 0; i < size / 3; i ++) {
-            var index = i * 3;
-            var x = coordinates.get(index) == null ? player.getLocation().getX() : coordinates.get(index);
-            var y = coordinates.get(index + 1) == null ? player.getLocation().getY() : coordinates.get(index + 1);
-            var z = coordinates.get(index + 2) == null ? player.getLocation().getZ() : coordinates.get(index + 2);
-            locations.add(new Location(player.getWorld(), x, y, z));
-        }
-        return locations;
-    }
-
 }
