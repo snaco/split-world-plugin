@@ -32,13 +32,21 @@ import java.util.stream.Collectors;
 
 @SuppressWarnings({"unchecked", "DataFlowIssue"})
 public class SplitWorld extends JavaPlugin implements Listener {
-    FileConfiguration config = getConfig();
+    FileConfiguration config;
     GameMode default_game_mode;
     Map<String, WorldConfig> world_configs;
-    SplitWorldKeys keys = new SplitWorldKeys(this);
+    SplitWorldKeys keys;
     ArrayList<Item> dropped_items = new ArrayList<>();
-    SplitWorldCommands commandHandler = new SplitWorldCommands(keys, world_configs, config.getBoolean("manage_creative_commands", true));
-    Utils utils = new Utils(world_configs);
+    SplitWorldCommands commandHandler;
+    Utils utils;
+
+    public SplitWorld() {
+        keys = new SplitWorldKeys(this);
+        config = getConfig();
+        world_configs = config.getList("world_configs").stream().map(item -> new WorldConfig((Map<String, Object>) item)).collect(Collectors.toMap(WorldConfig::getWorldName, item -> item));
+        commandHandler = new SplitWorldCommands(keys, world_configs, config.getBoolean("manage_creative_commands", true));
+        utils = new Utils(world_configs);
+    }
 
     @Override
     public void onEnable() {
@@ -49,7 +57,7 @@ public class SplitWorld extends JavaPlugin implements Listener {
             case "spectator" -> GameMode.SPECTATOR;
             default -> GameMode.SURVIVAL;
         };
-        world_configs = config.getList("world_configs").stream().map(item -> new WorldConfig((Map<String, Object>) item)).collect(Collectors.toMap(WorldConfig::getWorldName, item -> item));
+
         Bukkit.getPluginManager().registerEvents(this, this);
         new BukkitRunnable() {
             @Override
