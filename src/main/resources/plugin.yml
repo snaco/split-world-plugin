@@ -18,3 +18,27 @@ commands:
     description: enables split world game mode switching
     usage: /enable-split-world
     permission: split-world.enable-split-world
+  competition-end:
+    description: ends the competition
+    usage: /competition-end
+    permission: split-world.competition-end
+  set-winner:
+    description: sets the winners of the competition and issue prizes
+    usage: /set-winner <rank> [items]
+    permission: split-world.set-winners
+  open-survival:
+    description: opens the world to survival
+    usage: /open-survival
+    permission: split-world.open-survival
+  set-spawn-builder:
+    description: sets if the player can continue building in spawn after the competition ends.
+    usage: /set-spawn-builder <player> <true|false>
+    permission: split-world.set-spawn-builder
+  play-border-sound:
+    description: plays a sound when you cross a split world border
+    usage: /play-border-sound <true|false>
+    permission: split-world.play-border-sound
+  get-rewards:
+    description: get your rewards from the specified competition
+    usage: /get-rewards <competition-name>
+    permission: split-world.get-rewards

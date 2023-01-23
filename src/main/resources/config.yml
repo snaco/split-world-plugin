@@ -20,6 +20,15 @@ respawn_coordinates:
   - y: 53
   - z: -64
 
+# custom spawn protection
+competition_area:
+  - x1: 0
+  - y1: 0
+  - z1: 0
+  - x2: 0
+  - y2: 0
+  - z2: 0
+
 # Per world configs, this should theoretically work for any world but is only tested on default minecraft worlds
 world_configs:
 #  All properties are required, unless enabled is set to false in which case all other properties are ignored
