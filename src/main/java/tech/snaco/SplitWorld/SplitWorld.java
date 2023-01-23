@@ -35,19 +35,12 @@ public class SplitWorld extends JavaPlugin implements Listener {
     FileConfiguration config = getConfig();
     GameMode default_game_mode;
     Map<String, WorldConfig> world_configs;
-    NamespacedKey no_welcome_key = new NamespacedKey(this, "no_welcome_message");
-    NamespacedKey split_world_disabled_key = new NamespacedKey(this, "split_world_disabled");
-    NamespacedKey first_join_key = new NamespacedKey(this, "split_world_first_join");
-    NamespacedKey first_fish_attempt = new NamespacedKey(this, "first_fish_attempt");
-    NamespacedKey competition_ended = new NamespacedKey(this, "competition_ended");
-    NamespacedKey competition_participant = new NamespacedKey(this, "competition_participant");
-    NamespacedKey received_rewards = new NamespacedKey(this, "received_rewards");
-    NamespacedKey spawn_builder = new NamespacedKey(this, "spawn_builder");
-    NamespacedKey play_border_sound = new NamespacedKey(this, "play_border_sound");
-
+    SplitWorldKeys keys = new SplitWorldKeys(this);
     ArrayList<Item> dropped_items = new ArrayList<>();
     int number_of_worlds_enabled;
     boolean manage_creative_commands;
+
+    SplitWorldCommands commandHandler = new SplitWorldCommands(keys);
 
     @Override
     public void onEnable() {
@@ -80,98 +73,13 @@ public class SplitWorld extends JavaPlugin implements Listener {
     }
 
     @Override
-    public boolean onCommand(@NotNull CommandSender sender, Command cmd, @NotNull String label, String[] args) {
-        var player_name = sender.getName();
-        var player = sender.getServer().getPlayer(player_name);
-        var player_pdc = player.getPersistentDataContainer();
-
-        // border sound toggle
-        if (cmd.getName().equalsIgnoreCase("play-border-sound")) {
-            if (args.length != 1) {
-                return false;
-            }
-            if (args[0].equalsIgnoreCase("true")) {
-                player_pdc.set(play_border_sound, PersistentDataType.INTEGER, 1);
-            } else if (args[0].equalsIgnoreCase("false")) {
-                player_pdc.set(play_border_sound, PersistentDataType.INTEGER, 0);
-            } else {
-                return false;
-            }
-            return true;
-        }
-
-        //TODO: Finish
-        if (cmd.getName().equalsIgnoreCase("competition-end")) {
-            var world_pdc = player.getWorld().getPersistentDataContainer();
-            var is_competition_ended = world_pdc.get(competition_ended, PersistentDataType.INTEGER);
-            if (is_competition_ended == null) {
-                world_pdc.set(competition_ended, PersistentDataType.INTEGER, 1);
-                player.getWorld().getWorldBorder().setCenter(0, 0);
-                player.getWorld().getWorldBorder().setSize(30000, 600);
-            }
-        }
-
-        if (cmd.getName().equalsIgnoreCase("set-winners")) {
-            // TODO: Implement set-winners
-        }
-
-        //manage spawn builders
-        if (cmd.getName().equalsIgnoreCase("set-spawn-builder")) {
-            var server = player.getServer();
-            if (args.length != 2) {
-                return false;
-            }
-            var target_player = server.getPlayer(args[0]);
-            if (target_player == null) {
-                return false;
-            }
-            var target_player_pdc = target_player.getPersistentDataContainer();
-            if (args[1].equalsIgnoreCase("true")) {
-                target_player_pdc.set(spawn_builder, PersistentDataType.INTEGER, 1);
-                System.out.println(target_player.getName() + "is now a spawn builder.");
-                target_player.sendMessage("You now have permission to build in the spawn area.");
-            } else if (args[1].equalsIgnoreCase("false")) {
-                target_player_pdc.set(spawn_builder, PersistentDataType.INTEGER, 0);
-                System.out.println(target_player.getName() + "is no longer a spawn builder.");
-                target_player.sendMessage("You no longer have permission to build in the spawn area.");
-            } else {
-                return false;
-            }
-            return true;
-        }
-
-        //dismiss welcome message permanently
-        if (cmd.getName().equalsIgnoreCase("understood")) {
-            player_pdc.set(no_welcome_key, PersistentDataType.INTEGER, 1);
-            player.sendMessage("You will no longer see the welcome message for split world.");
-            return true;
-        }
-
-        if (cmd.getName().equalsIgnoreCase("disable-split-world")) {
-            if (player.hasPermission("split-world.disable-split-world")) {
-                player_pdc.set(split_world_disabled_key, PersistentDataType.INTEGER, 1);
-            }
-            return true;
-        }
-
-        if (cmd.getName().equalsIgnoreCase("enable-split-world")) {
-            if (player.hasPermission("split-world.enable-split-world")) {
-                player_pdc.set(split_world_disabled_key, PersistentDataType.INTEGER, 0);
-            }
-            return true;
-        }
-
-        return false;
+    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, String[] args) {
+       return commandHandler.onCommand(sender, command, label, args);
     }
 
     @Override
-    public List<String> onTabComplete(@NotNull CommandSender sender, Command cmd, @NotNull String label, String[] args) {
-        if (cmd.getName().equalsIgnoreCase("play-border-sound") && args.length == 1) {
-            return List.of("true", "false");
-        } else if (cmd.getName().equalsIgnoreCase("play-border-sound") && args.length > 1) {
-            return new ArrayList<>();
-        }
-        return null;
+    public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, String[] args) {
+        return commandHandler.onTabComplete(sender, command, label, args);
     }
     /* Event Handlers */
 
@@ -239,16 +147,16 @@ public class SplitWorld extends JavaPlugin implements Listener {
         var player_pdc = player.getPersistentDataContainer();
 
         //track who participated in the competition
-        var is_competition_ended = player.getWorld().getPersistentDataContainer().get(competition_ended, PersistentDataType.INTEGER);
+        var is_competition_ended = player.getWorld().getPersistentDataContainer().get(keys.getCompetitionEnded(), PersistentDataType.INTEGER);
         if (is_competition_ended == null || is_competition_ended == 0) {
-            var is_participant = player_pdc.get(competition_participant, PersistentDataType.INTEGER);
+            var is_participant = player_pdc.get(keys.getCompetitionParticipant(), PersistentDataType.INTEGER);
             if (is_participant == null) {
-                player_pdc.set(competition_participant, PersistentDataType.INTEGER, 1);
+                player_pdc.set(keys.getCompetitionParticipant(), PersistentDataType.INTEGER, 1);
             }
         }
 
         var world_name = player.getWorld().getName();
-        var no_welcome = player_pdc.get(no_welcome_key, PersistentDataType.INTEGER);
+        var no_welcome = player_pdc.get(keys.getNoWelcome(), PersistentDataType.INTEGER);
         if (!world_configs.containsKey(world_name) || !world_configs.get(world_name).enabled) {
             return;
         }
@@ -331,7 +239,7 @@ public class SplitWorld extends JavaPlugin implements Listener {
         if (!worldEnabled(event.getPlayer().getWorld())) { return; }
         var player = event.getPlayer();
         var player_pdc = player.getPersistentDataContainer();
-        var disabled = player_pdc.get(split_world_disabled_key, PersistentDataType.INTEGER);
+        var disabled = player_pdc.get(keys.getSplitWorldDisabled(), PersistentDataType.INTEGER);
         if (disabled != null && disabled == 1) {
             return;
         }
@@ -468,9 +376,9 @@ public class SplitWorld extends JavaPlugin implements Listener {
         var custom_respawn = config.getBoolean("custom_respawn", false);
         var coordinates = Arrays.stream(config.getString("respawn_coordinates").split(" ")).map(Double::parseDouble).toList();
         var player_pdc = event.getPlayer().getPersistentDataContainer();
-        var first_join = player_pdc.get(first_join_key, PersistentDataType.INTEGER);
+        var first_join = player_pdc.get(keys.getFirstJoin(), PersistentDataType.INTEGER);
         if (custom_respawn && (first_join == null || first_join != 1)) {
-            player_pdc.set(first_join_key, PersistentDataType.INTEGER , 1);
+            player_pdc.set(keys.getFirstJoin(), PersistentDataType.INTEGER , 1);
             event.setSpawnLocation(new Location(event.getPlayer().getWorld(), coordinates.get(0), coordinates.get(1), coordinates.get(2), -88, 6));
         }
     }
@@ -491,10 +399,10 @@ public class SplitWorld extends JavaPlugin implements Listener {
 
         //snark
         var player_pdc = event.getPlayer().getPersistentDataContainer();
-        var first_attempt = player_pdc.get(first_fish_attempt, PersistentDataType.INTEGER);
+        var first_attempt = player_pdc.get(keys.getFirstFishAttempt(), PersistentDataType.INTEGER);
         if (first_attempt == null) {
             event.getPlayer().giveExp(100);
-            player_pdc.set(first_fish_attempt, PersistentDataType.INTEGER, 1);
+            player_pdc.set(keys.getFirstFishAttempt(), PersistentDataType.INTEGER, 1);
         }
         event.getPlayer().sendMessage("Nice try.");
     }
@@ -540,7 +448,7 @@ public class SplitWorld extends JavaPlugin implements Listener {
         var player_inv = player.getInventory();
         var player_pdc = player.getPersistentDataContainer();
         if (player.getGameMode() != game_mode) {
-            var play_sound = player_pdc.get(play_border_sound, PersistentDataType.INTEGER);
+            var play_sound = player_pdc.get(keys.getPlayBorderSound(), PersistentDataType.INTEGER);
             if (play_sound == null || play_sound == 1) {
                 player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_COW_BELL, 1.0f, 0.5f);
             }
