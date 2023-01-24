@@ -1,45 +1,49 @@
-package tech.snaco.SplitWorld.types;
+package tech.snaco.SplitWorld.types
 
-import org.bukkit.persistence.PersistentDataAdapterContext;
-import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.util.io.BukkitObjectInputStream;
-import org.bukkit.util.io.BukkitObjectOutputStream;
-import org.jetbrains.annotations.NotNull;
+import org.bukkit.persistence.PersistentDataAdapterContext
+import org.bukkit.persistence.PersistentDataType
+import org.bukkit.potion.PotionEffect
+import org.bukkit.util.io.BukkitObjectInputStream
+import org.bukkit.util.io.BukkitObjectOutputStream
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.IOException
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-
-@SuppressWarnings("DataFlowIssue")
-public class PotionEffectArrayDataType implements PersistentDataType<byte[], PotionEffect[]> {
-    @Override
-    public @NotNull Class<byte[]> getPrimitiveType() { return byte[].class; }
-
-    @Override
-    public @NotNull Class<PotionEffect[]> getComplexType() { return PotionEffect[].class; }
-
-    @Override
-    public byte @NotNull [] toPrimitive(PotionEffect @NotNull [] complex, @NotNull PersistentDataAdapterContext context) {
-        try (var baos = new ByteArrayOutputStream(); var oos = new BukkitObjectOutputStream(baos)) {
-            oos.writeObject(complex);
-            oos.flush();
-            return baos.toByteArray();
-        } catch (IOException e) {
-            System.out.println("toPrimitive");
-            System.out.println(e.getMessage());
-        }
-        return new byte[0];
+class PotionEffectArrayDataType : PersistentDataType<ByteArray, Array<PotionEffect>> {
+    override fun getPrimitiveType(): Class<ByteArray> {
+        return ByteArray::class.java
     }
 
-    @Override
-    public PotionEffect @NotNull [] fromPrimitive(byte @NotNull [] primitive, @NotNull PersistentDataAdapterContext context) {
-        try(var bais = new ByteArrayInputStream(primitive); var ois = new BukkitObjectInputStream(bais)) {
-            return (PotionEffect[]) ois.readObject();
-        } catch (Exception e) {
-            System.out.println("fromPrimitive");
-            System.out.println(e.getMessage());
+    override fun getComplexType(): Class<Array<PotionEffect>> {
+        return Array<PotionEffect>::class.java
+    }
+
+    override fun toPrimitive(complex: Array<PotionEffect>, context: PersistentDataAdapterContext): ByteArray {
+        try {
+            ByteArrayOutputStream().use { output_stream ->
+                BukkitObjectOutputStream(output_stream).use { oos ->
+                    oos.writeObject(complex)
+                    oos.flush()
+                    return output_stream.toByteArray()
+                }
+            }
+        } catch (e: IOException) {
+            println("toPrimitive")
+            println(e.message)
         }
-        return null;
+        return ByteArray(0)
+    }
+
+    override fun fromPrimitive(primitive: ByteArray, context: PersistentDataAdapterContext): Array<PotionEffect> {
+        try {
+            ByteArrayInputStream(primitive).use { input_stream -> BukkitObjectInputStream(input_stream).use { ois ->
+                @Suppress("UNCHECKED_CAST")
+                return ois.readObject() as Array<PotionEffect>
+            } }
+        } catch (e: Exception) {
+            println("fromPrimitive")
+            println(e.message)
+        }
+        return arrayOf()
     }
 }

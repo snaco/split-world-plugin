@@ -18,14 +18,10 @@ import org.bukkit.event.entity.*;
 import org.bukkit.event.player.*;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.potion.PotionEffect;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.jetbrains.annotations.NotNull;
 import org.spigotmc.event.player.PlayerSpawnLocationEvent;
-import tech.snaco.SplitWorld.types.ItemStackArrayDataType;
-import tech.snaco.SplitWorld.types.PotionEffectArrayDataType;
 import tech.snaco.SplitWorld.types.WorldConfig;
-import org.bukkit.util.Vector;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -39,24 +35,27 @@ public class SplitWorld extends JavaPlugin implements Listener {
     ArrayList<Item> dropped_items = new ArrayList<>();
     SplitWorldCommands commandHandler;
     Utils utils;
+    PlayerUtils playerUtils;
 
     public SplitWorld() {
         keys = new SplitWorldKeys(this);
         config = getConfig();
-        world_configs = config.getList("world_configs").stream().map(item -> new WorldConfig((Map<String, Object>) item)).collect(Collectors.toMap(WorldConfig::getWorldName, item -> item));
+        world_configs = config.getList("world_configs").stream().map(item -> new WorldConfig((Map<String, Object>) item)).collect(Collectors.toMap(item -> item.world_name, item -> item));
         commandHandler = new SplitWorldCommands(keys, world_configs, config.getBoolean("manage_creative_commands", true));
-        utils = new Utils(world_configs);
-    }
-
-    @Override
-    public void onEnable() {
-        saveDefaultConfig();
         default_game_mode = switch (config.getString("default_game_mode")) {
             case "creative" -> GameMode.CREATIVE;
             case "adventure" -> GameMode.ADVENTURE;
             case "spectator" -> GameMode.SPECTATOR;
             default -> GameMode.SURVIVAL;
         };
+        utils = new Utils(world_configs);
+        playerUtils = new PlayerUtils(utils, keys, default_game_mode);
+    }
+
+    @Override
+    public void onEnable() {
+        saveDefaultConfig();
+
 
         Bukkit.getPluginManager().registerEvents(this, this);
         new BukkitRunnable() {
@@ -172,22 +171,22 @@ public class SplitWorld extends JavaPlugin implements Listener {
         var player = event.getPlayer();
 
         if (!utils.worldEnabled(destination.getWorld())) {
-            switchPlayerGameMode(player, default_game_mode);
+            playerUtils.switchPlayerGameMode(player, default_game_mode);
             return;
         }
 
         if (utils.locationInBufferZone(destination)) {
-            switchPlayerGameMode(player, GameMode.SPECTATOR);
+            playerUtils.switchPlayerGameMode(player, GameMode.SPECTATOR);
             return;
         } else if (utils.locationOnCreativeSide(destination)) {
-            switchPlayerGameMode(player, GameMode.CREATIVE);
+            playerUtils.switchPlayerGameMode(player, GameMode.CREATIVE);
             return;
         }
 
         var needs_warp = player.getGameMode() != GameMode.SURVIVAL;
-        switchPlayerGameMode(player, GameMode.SURVIVAL);
+        playerUtils.switchPlayerGameMode(player, GameMode.SURVIVAL);
         if (needs_warp) {
-            warpPlayerToGround(player, player.getLocation());
+            playerUtils.warpPlayerToGround(player, player.getLocation());
         }
     }
 
@@ -204,7 +203,7 @@ public class SplitWorld extends JavaPlugin implements Listener {
         // handle transitioning to survival safely
         if (player.getGameMode() != GameMode.SURVIVAL && utils.locationOnSurvivalSide(event.getTo()) && utils.locationOnSurvivalSide(player.getLocation())) {
             // temporarily load survival inv to check equip status
-            loadPlayerInventory(player, GameMode.SURVIVAL);
+            playerUtils.loadPlayerInventory(player, GameMode.SURVIVAL);
             var player_has_elytra_equipped = player.getInventory().getChestplate() != null && player.getInventory().getChestplate().getType() == Material.ELYTRA;
             player.getInventory().clear();
             if (player_has_elytra_equipped && player.getLocation().getBlock().getType() == Material.AIR) {
@@ -212,10 +211,10 @@ public class SplitWorld extends JavaPlugin implements Listener {
             }
             //noinspection deprecation
             if (!player_has_elytra_equipped && utils.locationOnSurvivalSide(player.getLocation()) && !player.isOnGround()) {
-                warpPlayerToGround(player, event.getTo());
+                playerUtils.warpPlayerToGround(player, event.getTo());
             }
         }
-        switchPlayerToConfiguredGameMode(player);
+        playerUtils.switchPlayerToConfiguredGameMode(player);
         if (utils.playerInBufferZone(player)) {
             player.getInventory().clear();
             var next_location = event.getTo();
@@ -223,7 +222,7 @@ public class SplitWorld extends JavaPlugin implements Listener {
                 event.setCancelled(true);
             }
         }
-        convertBufferZoneBlocksAroundPlayer(player);
+        playerUtils.convertBufferZoneBlocksAroundPlayer(player);
     }
 
     @EventHandler
@@ -231,7 +230,7 @@ public class SplitWorld extends JavaPlugin implements Listener {
         if (!utils.worldEnabled(event.getPlayer().getWorld())) {
             return;
         }
-        switchPlayerToConfiguredGameMode(event.getPlayer());
+        playerUtils.switchPlayerToConfiguredGameMode(event.getPlayer());
     }
 
     @EventHandler
@@ -371,143 +370,5 @@ public class SplitWorld extends JavaPlugin implements Listener {
         if (event.getEntity() instanceof Player && utils.locationInBufferZone(event.getEntity().getLocation())) {
             event.setCancelled(true);
         }
-    }
-
-    /* Player Management */
-
-    public void switchPlayerToConfiguredGameMode(Player player) {
-        // keep players in the default mode when disabled for the world
-        if (!utils.worldEnabled(player.getWorld())) {
-            switchPlayerGameMode(player, default_game_mode);
-            return;
-        }
-        // set to spectator for buffer zone
-        if (utils.playerInBufferZone(player)) {
-            var set_flying = player.isGliding() || player.isFlying();
-            switchPlayerGameMode(player, GameMode.ADVENTURE);
-            player.setAllowFlight(true);
-            if (set_flying) {
-                player.setFlying(true);
-            }
-
-            //keep player health and hunger static while in the border, ie no healing or dying here
-            player.setFoodLevel(player.getFoodLevel());
-            player.setHealth(player.getHealth());
-        // creative side
-        } else if (utils.playerOnCreativeSide(player)) {
-            switchPlayerGameMode(player, GameMode.CREATIVE);
-        // survival side
-        } else {
-            switchPlayerGameMode(player, GameMode.SURVIVAL);
-        }
-    }
-
-    public void switchPlayerGameMode(Player player, GameMode game_mode) {
-        var player_inv = player.getInventory();
-        var player_pdc = player.getPersistentDataContainer();
-        if (player.getGameMode() != game_mode) {
-            var play_sound = player_pdc.get(keys.getPlay_border_sound(), PersistentDataType.INTEGER);
-            if (play_sound == null || play_sound == 1) {
-                player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_COW_BELL, 1.0f, 0.5f);
-            }
-            var y = 1.5;
-            // south -Z
-            // north +Z
-            // east +X
-            // west -X
-            Vector vector = switch (player.getFacing()) {
-                case NORTH -> new Vector(0, y, -1);
-                case SOUTH -> new Vector(0, y, 1);
-                case EAST -> new Vector(1, y, 0);
-                case WEST -> new Vector(-1, y, 0);
-                case UP -> new Vector(0, y + 1, 0);
-                case DOWN -> new Vector(0, y - 1, 0);
-                case NORTH_EAST -> new Vector(1, y, -1);
-                case NORTH_WEST -> new Vector(-1, y, -1);
-                case SOUTH_EAST -> new Vector(1, y, 1);
-                case SOUTH_WEST -> new Vector(-1, y, 1);
-                case WEST_NORTH_WEST -> new Vector(-1, y, -0.5);
-                case NORTH_NORTH_WEST -> new Vector(-0.5, y, -1);
-                case NORTH_NORTH_EAST -> new Vector(0.5, y, -1);
-                case EAST_NORTH_EAST -> new Vector(1, y, -0.5);
-                case EAST_SOUTH_EAST -> new Vector(1, y, 0.5);
-                case SOUTH_SOUTH_EAST -> new Vector(0.5, y, 1);
-                case SOUTH_SOUTH_WEST -> new Vector(-0.5, y, 1);
-                case WEST_SOUTH_WEST -> new Vector(-1, y, 0.5);
-                case SELF -> new Vector(0, 0, 0);
-            };
-            player.getWorld().spawnParticle(Particle.DRAGON_BREATH, player.getLocation().clone().add(vector), 20);
-
-            savePlayerInventory(player);
-            player_inv.clear();
-            player.setGameMode(game_mode);
-            loadPlayerInventory(player, game_mode);
-        }
-    }
-
-    public void savePlayerInventory(Player player) {
-        var player_pdc = player.getPersistentDataContainer();
-        var inv_key = keys.getPlayerInventoryKey(player, player.getGameMode());
-        var eff_key = keys.getPlayerEffectsKey(player, player.getGameMode());
-        player_pdc.set(inv_key, new ItemStackArrayDataType(), player.getInventory().getContents());
-        player_pdc.set(eff_key, new PotionEffectArrayDataType(), player.getActivePotionEffects().toArray(PotionEffect[]::new));
-    }
-
-    public void loadPlayerInventory(Player player, GameMode game_mode) {
-        var inv_key = keys.getPlayerInventoryKey(player, game_mode);
-        var eff_key = keys.getPlayerEffectsKey(player, game_mode);
-        var player_pdc = player.getPersistentDataContainer();
-        var new_inv = player_pdc.get(inv_key, new ItemStackArrayDataType());
-        var effects = player_pdc.get(eff_key, new PotionEffectArrayDataType());
-        if (new_inv != null) {
-            player.getInventory().setContents(new_inv);
-        }
-        if (effects != null) {
-            for (var effect : player.getActivePotionEffects()) {
-                player.removePotionEffect(effect.getType());
-            }
-            for (var effect : effects) {
-                player.addPotionEffect(effect);
-            }
-        }
-    }
-
-    public void convertBufferZoneBlocksAroundPlayer(Player player) {
-        var world = player.getWorld();
-        var world_config = utils.getWorldConfig(world);
-        var player_location = player.getLocation().clone();
-
-        for (int i = world_config.border_location - (world_config.border_width / 2); i < world_config.border_location + (world_config.border_width / 2); i++) {
-            for (int j = -5; j < 5; j++) {
-                for (int y = -64; y < 319; y++) {
-                    Location loc = player_location.clone();
-                    loc.setY(y);
-                    if (world_config.border_axis.equals("X")) {
-                        loc.setX(i);
-                        loc.setZ(loc.getZ() + j);
-                    } else {
-                        loc.setZ(i);
-                        loc.setX(loc.getX() + j);
-                    }
-                    var block_type = world.getBlockAt(loc).getType();
-                    if (block_type != Material.AIR && block_type != Material.WATER && block_type != Material.LAVA) {
-                        world.getBlockAt(loc).setType(Material.BEDROCK);
-                    } else if (block_type == Material.WATER || block_type == Material.LAVA) {
-                        world.getBlockAt(loc).setType(Material.AIR);
-                    }
-                }
-            }
-        }
-    }
-
-    public void warpPlayerToGround(Player player, Location to_location) {
-        var location = to_location.clone();
-        var top = player.getWorld().getHighestBlockAt(location.getBlockX(), location.getBlockZ());
-        var pitch = location.getPitch();
-        var yaw = location.getYaw();
-        var destination = top.getLocation().add(0, 1, 0);
-        destination.setPitch(pitch);
-        destination.setYaw(yaw);
-        player.teleport(destination);
     }
 }

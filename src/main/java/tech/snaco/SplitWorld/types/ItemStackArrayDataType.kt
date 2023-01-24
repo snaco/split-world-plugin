@@ -1,47 +1,48 @@
-package tech.snaco.SplitWorld.types;
+package tech.snaco.SplitWorld.types
 
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.persistence.PersistentDataAdapterContext;
-import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.util.io.BukkitObjectInputStream;
-import org.bukkit.util.io.BukkitObjectOutputStream;
-import org.jetbrains.annotations.NotNull;
+import org.bukkit.inventory.ItemStack
+import org.bukkit.persistence.PersistentDataAdapterContext
+import org.bukkit.persistence.PersistentDataType
+import org.bukkit.util.io.BukkitObjectInputStream
+import org.bukkit.util.io.BukkitObjectOutputStream
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 
-import java.io.*;
-
-@SuppressWarnings({"DataFlowIssue"})
-public class ItemStackArrayDataType implements PersistentDataType<byte[], ItemStack[]> {
-    @Override
-    public @NotNull Class<byte[]> getPrimitiveType() {
-        return byte[].class;
+class ItemStackArrayDataType : PersistentDataType<ByteArray, Array<ItemStack>> {
+    override fun getPrimitiveType(): Class<ByteArray> {
+        return ByteArray::class.java
     }
 
-    @Override
-    public @NotNull Class<ItemStack[]> getComplexType() {
-        return ItemStack[].class;
+    override fun getComplexType(): Class<Array<ItemStack>> {
+        return Array<ItemStack>::class.java
     }
 
-    @Override
-    public byte @NotNull [] toPrimitive(ItemStack @NotNull [] complex, @NotNull PersistentDataAdapterContext context) {
-        try (var baos = new ByteArrayOutputStream(); var oos = new BukkitObjectOutputStream(baos)) {
-            oos.writeObject(complex);
-            oos.flush();
-            return baos.toByteArray();
-        } catch (Exception e) {
-            System.out.println("toPrimitive");
-            System.out.println(e.getMessage());
+    override fun toPrimitive(complex: Array<ItemStack>, context: PersistentDataAdapterContext): ByteArray {
+        try {
+            ByteArrayOutputStream().use { output_stream ->
+                BukkitObjectOutputStream(output_stream).use { oos ->
+                    oos.writeObject(complex)
+                    oos.flush()
+                    return output_stream.toByteArray()
+                }
+            }
+        } catch (e: Exception) {
+            println("toPrimitive")
+            println(e.message)
         }
-        return new byte[0];
+        return ByteArray(0)
     }
 
-    @Override
-    public ItemStack @NotNull [] fromPrimitive(byte @NotNull [] primitive, @NotNull PersistentDataAdapterContext context) {
-        try(var bais = new ByteArrayInputStream(primitive); var ois = new BukkitObjectInputStream(bais)) {
-            return (ItemStack[]) ois.readObject();
-        } catch (Exception e) {
-            System.out.println("fromPrimitive");
-            System.out.println(e.getMessage());
+    override fun fromPrimitive(primitive: ByteArray, context: PersistentDataAdapterContext): Array<ItemStack> {
+        try {
+            ByteArrayInputStream(primitive).use { input_stream -> BukkitObjectInputStream(input_stream).use { ois ->
+                @Suppress("UNCHECKED_CAST")
+                return ois.readObject() as Array<ItemStack>
+            } }
+        } catch (e: Exception) {
+            println("fromPrimitive")
+            println(e.message)
         }
-        return null;
+        return arrayOf()
     }
 }

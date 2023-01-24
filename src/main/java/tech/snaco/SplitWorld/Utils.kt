@@ -38,13 +38,13 @@ class Utils(private var world_configs: Map<String, WorldConfig>) {
                 && pos < world_config.border_location + world_config.border_width / 2.0)
     }
 
-    fun locationOnPositiveSideOfBuffer(location: Location): Boolean {
+    private fun locationOnPositiveSideOfBuffer(location: Location): Boolean {
         val world_config: WorldConfig = getWorldConfig(location.world)
         val pos = getRelevantPos(location)
         return pos >= world_config.border_location + world_config.border_width / 2.0
     }
 
-    fun locationOnNegativeSideOfBuffer(location: Location): Boolean {
+    private fun locationOnNegativeSideOfBuffer(location: Location): Boolean {
         val world_config: WorldConfig = getWorldConfig(location.world)
         val pos = getRelevantPos(location)
         return pos < world_config.border_location - world_config.border_width / 2.0
@@ -56,9 +56,9 @@ class Utils(private var world_configs: Map<String, WorldConfig>) {
         return !block_type.isSolid
     }
 
-    fun getRelevantPos(location: Location): Double {
+    private fun getRelevantPos(location: Location): Double {
         val world_config: WorldConfig = getWorldConfig(location.world)
-        return when (world_config.border_axis.uppercase(Locale.getDefault())) {
+        return when (world_config.border_axis?.uppercase(Locale.getDefault())) {
             "Y" -> location.y
             "Z" -> location.z
             else -> location.x
