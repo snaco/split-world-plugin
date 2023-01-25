@@ -68,7 +68,7 @@ object Messages {
             "VbsATSLndhZ4+ybJFyCsSawypFS5ploTY5KLZcD51Y8dkqF25Qprb4LoQOA2bKP5K/ZeeCIXHrC5A/KgoWG4jQ==",
             )
     private const val after_nether_egg = "pZEMkQjeKLX/DXTnEh0COAHbceVvHShpT3DQwL0QHZFFy20ip9bIpASz9wOHKbFe4g1ZxM3XMES1Lf0YNQ0WgIfPRdznMAHZCf6GFAiTY1wBCZEg9GQSi5Lu+4SgaC2CMNa8kwysMzvLg1furshPt0i/aZU1Pv1sR0zvUNlneSQ="
-    val nether_sleep_egg = listOf<String>(
+    private val nether_sleep_egg = listOf<String>(
             "XlCs6OnM8aeFWr2eHjmClL4pC7fwArMYzVBXNJcUNW/IPye6qcqBOzjr8Pv82MM2xWdAVQt+A7f8dIzVa0nDVm+BeklndSBe6J7d35PHvl+mxNBhc68KGilXoBcDTfqM",
             "ku3cA3GDp3Q7+AT7biSGg24lc98qrTKixJ1MwQwM5OZtDezQwLfeenc4vSfvYqYULoTTbCZpIgIcKSKakXS6rAUhuR+i/yD/nsi/Pc/LhhM=",
             "hqSpqUf6sx5uCL+CBlpz20eaPDWvsYSc2oTIcjDeMgnyDD3Q+E1dizz6Hec51cot3fJtNo0HBhUapGDb9kHLyFWPvc3AJxdOmvlnPyo6UWnSIzRBitvm6V8rglSAk5p5",
@@ -1639,14 +1639,15 @@ object Messages {
     private val key = SecretKeySpec("1234567890123456".toByteArray(), "AES")
     private val iv = IvParameterSpec(ByteArray(16))
 
-    fun decrypt(encrypted_string: String): String {
+    private fun decrypt(encrypted_string: String): String {
         val cipher = Cipher.getInstance(ALGORITHM)
         cipher.init(Cipher.DECRYPT_MODE, key, iv)
         val plain_string = cipher.doFinal(Base64.getDecoder().decode(encrypted_string))
         return String(plain_string)
     }
 
-    fun encrypt(plain_string: String): String {
+    @Suppress("unused")
+    private fun encrypt(plain_string: String): String {
         val cipher = Cipher.getInstance(ALGORITHM)
         cipher.init(Cipher.ENCRYPT_MODE, key, iv)
         val encrypted_string = cipher.doFinal(plain_string.toByteArray())
