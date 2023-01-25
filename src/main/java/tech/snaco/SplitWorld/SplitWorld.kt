@@ -346,7 +346,7 @@ class SplitWorld : JavaPlugin(), Listener {
         if (!utils.worldEnabled(event.player.world)) {
             return
         }
-        if (utils.locationInBufferZone(event.item.location)) {
+        if (utils.locationInBufferZone(event.player.location)) {
             event.isCancelled = true
         }
     }
