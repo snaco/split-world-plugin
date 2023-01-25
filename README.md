@@ -23,26 +23,25 @@ This is a plugin that allows for both creative and survival to coexist in the sa
 
 # Commands
 * Players can use /fill /setblock /clone on the creative side, you must give the permission for this command with [LuckPerms](https://luckperms.net/), the plugin will prevent the commands if they contain any blocks not on the creative side and prevent their execution on the survival side.
-
 * /understood: (you should give permission for this to everyone)
   ```
     description: You understand the nature of the split world and don't want to see the welcome message anymore.
     usage: /understood
     permission: split-world.understood
   ```
-* disable-split-world: (you should give this to admins/ops only)
+* /disable-split-world: (you should give this to admins/ops only)
   ```
     description: disables split world game mode switching
     usage: /disable-split-world
     permission: split-world.disable-split-world
   ```
-* enable-split-world: (you should give this to admins/ops only)
+* /enable-split-world: (you should give this to admins/ops only)
   ```
     description: enables split world game mode switching
     usage: /enable-split-world
     permission: split-world.enable-split-world
   ```
-* play-border-sound: (you should give permission for this to everyone)
+* /play-border-sound: (you should give permission for this to everyone)
   ```
     description: plays a sound when you cross a split world border
     usage: /play-border-sound <true|false>
