@@ -46,35 +46,10 @@ class PlayerUtils(private var utils: Utils, private var keys: SplitWorldKeys, pr
         if (player.gameMode != game_mode) {
             val play_sound = player_pdc.get(keys.play_border_sound, PersistentDataType.INTEGER)
             if (play_sound == null || play_sound == 1) {
-                player.playSound(player.location, Sound.BLOCK_NOTE_BLOCK_COW_BELL, 1.0f, 0.5f)
+                player.playSound(player.location, Sound.BLOCK_NOTE_BLOCK_BELL, 1.0f, 1.0f)
             }
-            val y = 1.5
-            // south -Z
-            // north +Z
-            // east +X
-            // west -X
-            val vector = when (player.facing) {
-                BlockFace.NORTH -> Vector(0.0, y, -1.0)
-                BlockFace.SOUTH -> Vector(0.0, y, 1.0)
-                BlockFace.EAST -> Vector(1.0, y, 0.0)
-                BlockFace.WEST -> Vector(-1.0, y, 0.0)
-                BlockFace.UP -> Vector(0.0, y + 1, 0.0)
-                BlockFace.DOWN -> Vector(0.0, y - 1, 0.0)
-                BlockFace.NORTH_EAST -> Vector(1.0, y, -1.0)
-                BlockFace.NORTH_WEST -> Vector(-1.0, y, -1.0)
-                BlockFace.SOUTH_EAST -> Vector(1.0, y, 1.0)
-                BlockFace.SOUTH_WEST -> Vector(-1.0, y, 1.0)
-                BlockFace.WEST_NORTH_WEST -> Vector(-1.0, y, -0.5)
-                BlockFace.NORTH_NORTH_WEST -> Vector(-0.5, y, -1.0)
-                BlockFace.NORTH_NORTH_EAST -> Vector(0.5, y, -1.0)
-                BlockFace.EAST_NORTH_EAST -> Vector(1.0, y, -0.5)
-                BlockFace.EAST_SOUTH_EAST -> Vector(1.0, y, 0.5)
-                BlockFace.SOUTH_SOUTH_EAST -> Vector(0.5, y, 1.0)
-                BlockFace.SOUTH_SOUTH_WEST -> Vector(-0.5, y, 1.0)
-                BlockFace.WEST_SOUTH_WEST -> Vector(-1.0, y, 0.5)
-                BlockFace.SELF -> Vector(0, 0, 0)
-            }
-            player.world.spawnParticle(Particle.DRAGON_BREATH, player.location.clone().add(vector), 20)
+            val facing_vector = getFacingVector(player)
+            player.world.spawnParticle(Particle.DRAGON_BREATH, player.location.clone().add(facing_vector), 20)
             savePlayerInventory(player)
             player_inv.clear()
             player.gameMode = game_mode
@@ -142,9 +117,47 @@ class PlayerUtils(private var utils: Utils, private var keys: SplitWorldKeys, pr
         val top = player.world.getHighestBlockAt(location.blockX, location.blockZ)
         val pitch = location.pitch
         val yaw = location.yaw
-        val destination = top.location.add(0.0, 1.0, 0.0)
+        val destination = if (location.block.type == Material.AIR && location.add(0.0, 1.0, 0.0).block.type == Material.AIR) {
+            utils.closestSolidBlockBelowLocation(utils.addToRelevantPos(location, 0.5)).add(0.0, 1.0, 0.0)
+        } else {
+            utils.addToRelevantPos(top.location, 0.5).add(0.0, 1.0, 0.0)
+        }
         destination.pitch = pitch
         destination.yaw = yaw
         player.teleport(destination)
+    }
+
+    private fun getFacingVector(player: Player): Vector {
+        val y = 1.5
+        // south -Z
+        // north +Z
+        // east +X
+        // west -X
+        return when (player.facing) {
+            BlockFace.NORTH -> Vector(0.0, y, -1.0)
+            BlockFace.SOUTH -> Vector(0.0, y, 1.0)
+            BlockFace.EAST -> Vector(1.0, y, 0.0)
+            BlockFace.WEST -> Vector(-1.0, y, 0.0)
+            BlockFace.UP -> Vector(0.0, y + 1, 0.0)
+            BlockFace.DOWN -> Vector(0.0, y - 1, 0.0)
+            BlockFace.NORTH_EAST -> Vector(1.0, y, -1.0)
+            BlockFace.NORTH_WEST -> Vector(-1.0, y, -1.0)
+            BlockFace.SOUTH_EAST -> Vector(1.0, y, 1.0)
+            BlockFace.SOUTH_WEST -> Vector(-1.0, y, 1.0)
+            BlockFace.WEST_NORTH_WEST -> Vector(-1.0, y, -0.5)
+            BlockFace.NORTH_NORTH_WEST -> Vector(-0.5, y, -1.0)
+            BlockFace.NORTH_NORTH_EAST -> Vector(0.5, y, -1.0)
+            BlockFace.EAST_NORTH_EAST -> Vector(1.0, y, -0.5)
+            BlockFace.EAST_SOUTH_EAST -> Vector(1.0, y, 0.5)
+            BlockFace.SOUTH_SOUTH_EAST -> Vector(0.5, y, 1.0)
+            BlockFace.SOUTH_SOUTH_WEST -> Vector(-0.5, y, 1.0)
+            BlockFace.WEST_SOUTH_WEST -> Vector(-1.0, y, 0.5)
+            BlockFace.SELF -> Vector(0, 0, 0)
+        }
+    }
+
+    fun playerInAir(player: Player): Boolean {
+        val under_feet = player.location.clone().add(0.0, -1.0, 0.0)
+        return under_feet.block.type == Material.AIR && player.location.block.type == Material.AIR
     }
 }

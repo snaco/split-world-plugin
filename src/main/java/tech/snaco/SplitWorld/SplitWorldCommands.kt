@@ -10,6 +10,7 @@ import org.bukkit.persistence.PersistentDataType
 import tech.snaco.SplitWorld.types.WorldConfig
 
 class SplitWorldCommands(private var keys: SplitWorldKeys,
+                         private var player_utils: PlayerUtils,
                          world_configs: Map<String, WorldConfig>,
                          private var manage_creative_commands: Boolean)  {
 
@@ -94,19 +95,6 @@ class SplitWorldCommands(private var keys: SplitWorldKeys,
             return true
         }
 
-        //TODO: Finish
-        if (command.name.equals("competition-end", ignoreCase = true)) {
-            val world_pdc = player.world.persistentDataContainer
-            val is_competition_ended = world_pdc.get(keys.competition_ended, PersistentDataType.INTEGER)
-            if (is_competition_ended == null) {
-                world_pdc.set(keys.competition_ended, PersistentDataType.INTEGER, 1)
-                player.world.worldBorder.setCenter(0.0, 0.0)
-                player.world.worldBorder.setSize(30000.0, 600)
-            }
-        }
-
-        // TODO: Implement set-winners
-
         //manage spawn builders
         if (command.name.equals("set-spawn-builder", ignoreCase = true)) {
             val server = player.server
@@ -149,6 +137,7 @@ class SplitWorldCommands(private var keys: SplitWorldKeys,
             if (player.hasPermission("split-world.enable-split-world")) {
                 player_pdc.set(keys.split_world_disabled, PersistentDataType.INTEGER, 0)
             }
+            player_utils.switchPlayerToConfiguredGameMode(player)
             return true
         }
 

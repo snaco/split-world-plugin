@@ -1,5 +1,5 @@
 name: SplitWorld
-version: 2.3.1
+version: 3.0.0
 main: tech.snaco.SplitWorld.SplitWorld
 description: Splits the world into two game modes
 author: snaco
@@ -18,14 +18,6 @@ commands:
     description: enables split world game mode switching
     usage: /enable-split-world
     permission: split-world.enable-split-world
-  competition-end:
-    description: ends the competition
-    usage: /competition-end
-    permission: split-world.competition-end
-  set-winner:
-    description: sets the winners of the competition and issue prizes
-    usage: /set-winner <rank> [items]
-    permission: split-world.set-winners
   open-survival:
     description: opens the world to survival
     usage: /open-survival
@@ -38,7 +30,3 @@ commands:
     description: plays a sound when you cross a split world border
     usage: /play-border-sound <true|false>
     permission: split-world.play-border-sound
-  get-rewards:
-    description: get your rewards from the specified competition
-    usage: /get-rewards <competition-name>
-    permission: split-world.get-rewards

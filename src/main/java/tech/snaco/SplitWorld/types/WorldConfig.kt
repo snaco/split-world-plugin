@@ -2,9 +2,9 @@ package tech.snaco.SplitWorld.types
 
 import org.bukkit.configuration.serialization.ConfigurationSerializable
 
-class WorldConfig(map: Map<String?, Any?>) : ConfigurationSerializable {
+class WorldConfig(map: Map<String, Any>) : ConfigurationSerializable {
     @JvmField
-    var world_name: String?
+    var world_name: String
     @JvmField
     var enabled: Boolean
     @JvmField
@@ -21,7 +21,7 @@ class WorldConfig(map: Map<String?, Any?>) : ConfigurationSerializable {
     var no_creative_monsters = false
 
     init {
-        world_name = map["world_name"] as String?
+        world_name = map["world_name"] as String
         enabled = map["enabled"] as Boolean
         if (enabled) {
             border_axis = map["border_axis"] as String?

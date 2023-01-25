@@ -9,11 +9,12 @@ class SplitWorldKeys(private var split_world: SplitWorld) {
     var split_world_disabled: NamespacedKey = NamespacedKey(split_world, "split_world_disabled")
     var first_join: NamespacedKey = NamespacedKey(split_world, "split_world_first_join")
     var first_fish_attempt: NamespacedKey = NamespacedKey(split_world, "first_fish_attempt")
-    var competition_ended: NamespacedKey = NamespacedKey(split_world, "competition_ended")
-    var competition_participant: NamespacedKey = NamespacedKey(split_world, "competition_participant")
-//    var received_rewards: NamespacedKey = NamespacedKey(split_world, "received_rewards")
     var spawn_builder: NamespacedKey = NamespacedKey(split_world, "spawn_builder")
     var play_border_sound: NamespacedKey = NamespacedKey(split_world, "play_border_sound")
+    var sleep_in_nether_score: NamespacedKey = NamespacedKey(split_world, "sleep_in_nether_score")
+    var nether_egg: NamespacedKey = NamespacedKey(split_world, "bee_movie_score")
+    var nether_sleep_throttle: NamespacedKey = NamespacedKey(split_world, "nether_sleep_throttle")
+    var nether_sleep_tock: NamespacedKey = NamespacedKey(split_world, "nether_sleep_tock")
 
     fun getPlayerInventoryKey(player: Player, game_mode: GameMode): NamespacedKey {
         return when (game_mode) {

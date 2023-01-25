@@ -1,8 +1,10 @@
 package tech.snaco.SplitWorld
 
 import org.bukkit.Location
+import org.bukkit.NamespacedKey
 import org.bukkit.World
 import org.bukkit.entity.Player
+import org.bukkit.persistence.PersistentDataType
 import tech.snaco.SplitWorld.types.WorldConfig
 import java.util.*
 
@@ -56,12 +58,21 @@ class Utils(private var world_configs: Map<String, WorldConfig>) {
         return !block_type.isSolid
     }
 
-    private fun getRelevantPos(location: Location): Double {
+    fun getRelevantPos(location: Location): Double {
         val world_config: WorldConfig = getWorldConfig(location.world)
         return when (world_config.border_axis?.uppercase(Locale.getDefault())) {
             "Y" -> location.y
             "Z" -> location.z
             else -> location.x
+        }
+    }
+
+    fun addToRelevantPos(location: Location, value: Double): Location {
+        val world_config: WorldConfig = getWorldConfig(location.world)
+        return when (world_config.border_axis?.uppercase(Locale.getDefault())) {
+            "Y" -> location.add(0.0, value, 0.0)
+            "Z" -> location.add(0.0, 0.0, value)
+            else -> location.add(value, 0.0, 0.0)
         }
     }
 
@@ -74,5 +85,28 @@ class Utils(private var world_configs: Map<String, WorldConfig>) {
     fun worldEnabled(world: World): Boolean {
         val world_name = world.name
         return world_configs.containsKey(world_name) && world_configs[world_name]!!.enabled
+    }
+
+    fun closestSolidBlockBelowLocation(location: Location): Location {
+        val loc = location.clone()
+        var block_found = false
+        while (!block_found) {
+            loc.add(0.0, -1.0, 0.0)
+            if (loc.block.isSolid) {
+                block_found = true
+            }
+            if (loc.y <= -64) break
+        }
+        return loc
+    }
+
+    companion object {
+        fun setPdcInt(player: Player, key: NamespacedKey, value: Int) {
+            player.persistentDataContainer.set(key, PersistentDataType.INTEGER, value)
+        }
+
+        fun getPdcInt(player: Player, key: NamespacedKey): Int? {
+            return player.persistentDataContainer.get(key, PersistentDataType.INTEGER)
+        }
     }
 }
