@@ -10,7 +10,7 @@ This is a plugin that allows for both creative and survival to coexist in the sa
 
 # Buffer Zone
 * Defined by picking an axis, X, Y or Z, picking a border-location which is the value of the specified axis coordinate where the border will be, a border-width which will determine how wide the buffer zone will be
-    * i.e: ```border_axis: X, border_location: 0, border_width: 10, creative_side: negative``` will mean the player will be set to creative mode when their X coordinate is less than -5, adventure mode (buffer zone) between X=-5 and X=5, and in survival when X>5
+  * i.e: ```border_axis: X, border_location: 0, border_width: 10, creative_side: negative``` will mean the player will be set to creative mode when their X coordinate is less than -5, adventure mode (buffer zone) between X=-5 and X=5, and in survival when X>5
 * Players cannot die in the buffer zone
 * Players cannot regain health in the buffer zone
 * Players will not lose hunger in the buffer zone
@@ -49,19 +49,18 @@ This is a plugin that allows for both creative and survival to coexist in the sa
     permission: split-world.play-border-sound
   ```
 
-# Miscellaneous
-* when a player dies they will drop 1/4 of their XP instead of the static amount in vanilla.
-
-
-# Cheat Prevention Changes
+# Cheat Prevention
 * Items dropped into the buffer zone are deleted
 * Fluid cannot flow into the buffer zone
 * Items/Entities can not be sent through portals on the creative side
-    * Re-allow portals to be created on the creative side
+  * Re-allow portals to be created on the creative side
 * GameMode is set when a player crosses through a portal
 * GameMode is set when a player teleports to a location or player (should work with any tp plugin tested with simple tpa)
 * Inventories and Potion Effects are saved when entering the buffer zone and restored when you return
 * Players are prevented from using a fishing pole to pull items from the creative side to the survival side
 
+# Miscellaneous
+* when a player dies they will drop 1/4 of their XP instead of the static amount in vanilla.
+
 # Easter Eggs
-* they be a thing, you'll have to find them yourself. (TODO: Add config option to disable these)
+* they be a thing, you'll have to find them yourself.
