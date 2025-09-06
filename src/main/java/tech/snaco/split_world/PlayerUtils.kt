@@ -10,7 +10,7 @@ import tech.snaco.split_world.types.ItemStackArrayDataType
 import tech.snaco.split_world.types.PotionEffectArrayDataType
 import tech.snaco.split_world.types.WorldConfig
 
-@Suppress("UNCHECKED_CAST")
+
 class PlayerUtils(private var utils: Utils, private var keys: SplitWorldKeys, private var defaultGameMode: GameMode) {
   /* Player Management */
   fun switchPlayerToConfiguredGameMode(player: Player) {
@@ -21,10 +21,9 @@ class PlayerUtils(private var utils: Utils, private var keys: SplitWorldKeys, pr
     }
     // set to spectator for buffer zone
     if (utils.playerInBufferZone(player)) {
-      val setFlying = player.isGliding || player.isFlying
       switchPlayerGameMode(player, GameMode.ADVENTURE)
       player.allowFlight = true
-      if (setFlying) {
+      if (player.isGliding || player.isFlying) {
         player.isFlying = true
       }
 
@@ -41,10 +40,8 @@ class PlayerUtils(private var utils: Utils, private var keys: SplitWorldKeys, pr
   }
 
   fun switchPlayerGameMode(player: Player, gameMode: GameMode) {
-    val playerInv = player.inventory
-    val playerPdc = player.persistentDataContainer
     if (player.gameMode != gameMode) {
-      val playSound = playerPdc.get(keys.playBorderSound, PersistentDataType.INTEGER)
+      val playSound = player.persistentDataContainer.get(keys.playBorderSound, PersistentDataType.INTEGER)
       if (playSound == null || playSound == 1) {
         player.playSound(player.location, Sound.BLOCK_NOTE_BLOCK_BELL, 1.0f, 1.0f)
       }
@@ -57,29 +54,41 @@ class PlayerUtils(private var utils: Utils, private var keys: SplitWorldKeys, pr
         20
       )
       savePlayerInventory(player)
-      playerInv.clear()
+      player.inventory.clear()
       player.gameMode = gameMode
       loadPlayerInventory(player)
     }
   }
 
   fun savePlayerInventory(player: Player) {
-    val playerPdc = player.persistentDataContainer
-    val invKey: NamespacedKey = keys.getPlayerInventoryKey(player)
-    val effKey: NamespacedKey = keys.getPlayerEffectsKey(player)
-    playerPdc.set(invKey, ItemStackArrayDataType(), player.inventory.contents as Array<ItemStack>)
-    playerPdc.set(effKey, PotionEffectArrayDataType(), player.activePotionEffects.toTypedArray())
+    // save inventory contents
+    @Suppress("UNCHECKED_CAST")
+    player.persistentDataContainer.set(
+      keys.getPlayerInventoryKey(player), ItemStackArrayDataType(), player.inventory.contents as Array<ItemStack>
+    )
+    // save potion effects
+    player.persistentDataContainer.set(
+      keys.getPlayerEffectsKey(player), PotionEffectArrayDataType(), player.activePotionEffects.toTypedArray()
+    )
+    // save ender chest contents
+    @Suppress("UNCHECKED_CAST")
+    player.persistentDataContainer.set(
+      keys.getPlayerEnderChestContentsKey(player),
+      ItemStackArrayDataType(),
+      player.enderChest.contents as Array<ItemStack>
+    )
   }
 
   fun loadPlayerInventory(player: Player) {
-    val invKey: NamespacedKey = keys.getPlayerInventoryKey(player)
-    val effKey: NamespacedKey = keys.getPlayerEffectsKey(player)
-    val playerPdc = player.persistentDataContainer
-    val newInv = playerPdc.get(invKey, ItemStackArrayDataType())
-    val effects = playerPdc.get(effKey, PotionEffectArrayDataType())
-    if (newInv != null) {
-      player.inventory.contents = newInv
+    // load inventory contents
+    val inventoryContents =
+      player.persistentDataContainer.get(keys.getPlayerInventoryKey(player), ItemStackArrayDataType())
+    if (inventoryContents != null) {
+      player.inventory.contents = inventoryContents
     }
+
+    // load potion effects
+    val effects = player.persistentDataContainer.get(keys.getPlayerEffectsKey(player), PotionEffectArrayDataType())
     if (effects != null) {
       for (effect in player.activePotionEffects) {
         player.removePotionEffect(effect.type)
@@ -87,6 +96,13 @@ class PlayerUtils(private var utils: Utils, private var keys: SplitWorldKeys, pr
       for (effect in effects) {
         player.addPotionEffect(effect)
       }
+    }
+
+    //load ender chest contents
+    val enderChestContents =
+      player.persistentDataContainer.get(keys.getPlayerEnderChestContentsKey(player), ItemStackArrayDataType())
+    if (enderChestContents != null) {
+      player.enderChest.contents = enderChestContents
     }
   }
 
