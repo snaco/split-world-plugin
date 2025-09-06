@@ -10,40 +10,41 @@ import java.io.ByteArrayOutputStream
 import java.io.IOException
 
 class PotionEffectArrayDataType : PersistentDataType<ByteArray, Array<PotionEffect>> {
-    override fun getPrimitiveType(): Class<ByteArray> {
-        return ByteArray::class.java
-    }
+  override fun getPrimitiveType(): Class<ByteArray> {
+    return ByteArray::class.java
+  }
 
-    override fun getComplexType(): Class<Array<PotionEffect>> {
-        return Array<PotionEffect>::class.java
-    }
+  override fun getComplexType(): Class<Array<PotionEffect>> {
+    return Array<PotionEffect>::class.java
+  }
 
-    override fun toPrimitive(complex: Array<PotionEffect>, context: PersistentDataAdapterContext): ByteArray {
-        try {
-            ByteArrayOutputStream().use { outputStream ->
-                BukkitObjectOutputStream(outputStream).use { oos ->
-                    oos.writeObject(complex)
-                    oos.flush()
-                    return outputStream.toByteArray()
-                }
-            }
-        } catch (e: IOException) {
-            println("toPrimitive")
-            println(e.message)
+  override fun toPrimitive(complex: Array<PotionEffect>, context: PersistentDataAdapterContext): ByteArray {
+    try {
+      ByteArrayOutputStream().use { outputStream ->
+        BukkitObjectOutputStream(outputStream).use { oos ->
+          oos.writeObject(complex)
+          oos.flush()
+          return outputStream.toByteArray()
         }
-        return ByteArray(0)
+      }
+    } catch (e: IOException) {
+      println("toPrimitive")
+      println(e.message)
     }
+    return ByteArray(0)
+  }
 
-    override fun fromPrimitive(primitive: ByteArray, context: PersistentDataAdapterContext): Array<PotionEffect> {
-        try {
-            ByteArrayInputStream(primitive).use { inputStream -> BukkitObjectInputStream(inputStream).use { ois ->
-                @Suppress("UNCHECKED_CAST")
-                return ois.readObject() as Array<PotionEffect>
-            } }
-        } catch (e: Exception) {
-            println("fromPrimitive")
-            println(e.message)
+  override fun fromPrimitive(primitive: ByteArray, context: PersistentDataAdapterContext): Array<PotionEffect> {
+    try {
+      ByteArrayInputStream(primitive).use { inputStream ->
+        BukkitObjectInputStream(inputStream).use { ois ->
+          @Suppress("UNCHECKED_CAST") return ois.readObject() as Array<PotionEffect>
         }
-        return arrayOf()
+      }
+    } catch (e: Exception) {
+      println("fromPrimitive")
+      println(e.message)
     }
+    return arrayOf()
+  }
 }
