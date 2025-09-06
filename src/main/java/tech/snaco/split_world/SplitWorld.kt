@@ -1,4 +1,4 @@
-package tech.snaco.SplitWorld
+package tech.snaco.split_world
 
 import com.destroystokyo.paper.event.entity.EndermanEscapeEvent
 import io.papermc.paper.event.entity.EntityMoveEvent
@@ -13,10 +13,12 @@ import org.bukkit.entity.Item
 import org.bukkit.entity.Monster
 import org.bukkit.entity.Player
 import org.bukkit.entity.Skeleton
+import org.bukkit.event.Cancellable
 import org.bukkit.event.Event
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.block.BlockBreakEvent
+import org.bukkit.event.block.BlockEvent
 import org.bukkit.event.block.BlockFromToEvent
 import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.entity.*
@@ -27,107 +29,101 @@ import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitRunnable
 import org.bukkit.util.Vector
 import org.spigotmc.event.player.PlayerSpawnLocationEvent
-import tech.snaco.SplitWorld.extras.easter_eggs.Messages
-import tech.snaco.SplitWorld.types.WorldConfig
+import tech.snaco.split_world.extras.easter_eggs.Messages
+import tech.snaco.split_world.types.WorldConfig
 import java.util.*
 import java.util.stream.Collectors
-import kotlin.collections.ArrayList
 
 @Suppress("UNCHECKED_CAST")
 class SplitWorld : JavaPlugin(), Listener {
     private var config: FileConfiguration = getConfig()
-    private var default_game_mode: GameMode = when (config.getString("default_game_mode")) {
+    private var defaultGameMode: GameMode = when (config.getString("default_game_mode")) {
         "creative" -> GameMode.CREATIVE
         "adventure" -> GameMode.ADVENTURE
         "spectator" -> GameMode.SPECTATOR
         else -> GameMode.SURVIVAL
     }
-    private var world_configs: Map<String, WorldConfig> = config.getList("world_configs")!!.stream()
+    private var worldConfigs: Map<String, WorldConfig> = config.getList("world_configs")!!.stream()
             .map { item: Any? -> WorldConfig((item as Map<String, Any>)) }
             .collect(Collectors.toMap(
-                    { item: WorldConfig -> item.world_name },
+                    { item: WorldConfig -> item.worldName },
                     { item: WorldConfig -> item }))
     private var keys: SplitWorldKeys = SplitWorldKeys(this)
-    private var dropped_items = ArrayList<Item>()
-    private var utils: Utils = Utils(world_configs)
-    private var player_utils: PlayerUtils = PlayerUtils(utils, keys, default_game_mode)
-    private var command_handler: SplitWorldCommands = SplitWorldCommands(keys, player_utils, world_configs, config.getBoolean("manage_creative_commands", true))
-    private var players_sleeping_in_nether = HashSet<Player>()
+    private var droppedItems = ArrayList<Item>()
+    private var utils: Utils = Utils(worldConfigs)
+    private var playerUtils: PlayerUtils = PlayerUtils(utils, keys, defaultGameMode)
+    private var commandHandler: SplitWorldCommands = SplitWorldCommands(keys, playerUtils, worldConfigs, config.getBoolean("manage_creative_commands", true))
+    private var playersSleepingInNether = HashSet<Player>()
 
     override fun onEnable() {
         saveDefaultConfig()
         Bukkit.getPluginManager().registerEvents(this, this)
         object : BukkitRunnable() {
             override fun run() {
-                if (dropped_items.size.toLong() > 0) {
-                    val items_to_remove = ArrayList<Item>()
-                    for (item in dropped_items) {
+                if (droppedItems.size.toLong() > 0) {
+                    val itemsToRemove = ArrayList<Item>()
+                    for (item in droppedItems) {
                         if (utils.worldEnabled(item.world) && utils.locationInBufferZone(item.location)) {
                             item.remove()
-                            items_to_remove.add(item)
+                            itemsToRemove.add(item)
                         }
                     }
-                    dropped_items.removeAll(items_to_remove.toSet())
+                    droppedItems.removeAll(itemsToRemove.toSet())
                 }
             }
         }.runTaskTimer(this, 0, 1L)
 
         object : BukkitRunnable() {
             override fun run() {
-                Messages.runNetherSleepTask(players_sleeping_in_nether, keys)
+                Messages.runNetherSleepTask(playersSleepingInNether, keys)
             }
         }.runTaskTimer(this, 20L, 1L)
     }
 
     /* Commands */
     override fun onCommand(sender: CommandSender, command: Command, label: String, args: Array<String>): Boolean {
-        return command_handler.onCommand(sender, command, args)
+        return commandHandler.onCommand(sender, command, args)
     }
 
     override fun onTabComplete(sender: CommandSender, command: Command, label: String, args: Array<String>): List<String>? {
-        return command_handler.onTabComplete(command, args)
+        return commandHandler.onTabComplete(command, args)
     }
 
     @EventHandler
     fun preProcessCommand(event: PlayerCommandPreprocessEvent?) {
-        command_handler.preProcessCommand(event!!)
+        commandHandler.preProcessCommand(event!!)
     }
 
     /* TBD */
     @EventHandler
     fun onPlayerJoin(event: PlayerJoinEvent) {
-        val welcome_message_disabled = config.getBoolean("disable_welcome_message")
-        if (welcome_message_disabled) {
+        val welcomeMessageDisabled = config.getBoolean("disable_welcome_message")
+        if (welcomeMessageDisabled) {
             return
         }
         val player = event.player
-        val player_pdc = player.persistentDataContainer
-        val world_name = player.world.name
-        val no_welcome = player_pdc.get(keys.no_welcome, PersistentDataType.INTEGER)
-        if (!world_configs.containsKey(world_name) || !world_configs[world_name]!!.enabled) {
+        val playerPdc = player.persistentDataContainer
+        val worldName = player.world.name
+        val noWelcome = playerPdc.get(keys.noWelcome, PersistentDataType.INTEGER)
+        if (!worldConfigs.containsKey(worldName) || !worldConfigs[worldName]!!.enabled) {
             return
         }
-        val world_config = utils.getWorldConfig(player.world)
-        if (no_welcome == null) {
-            player.sendMessage(Component.text("Hello " + player.name + "! "
-                    + "This world is split! You can head over towards the " + world_config.creative_side
-                    + " side of the border at " + world_config.border_axis + "=" + world_config.border_location
-                    + " to enter the creative side of the world. Your inventory will automatically be saved"
-                    + " and loaded whenever you cross the border. Have fun! (To disable this message use /understood)"))
+        val worldConfig = utils.getWorldConfig(player.world)
+        if (noWelcome == null) {
+            player.sendMessage(Component.text("""
+                Hello ${player.name}! 
+                This is a split world! That means half of the world is creative, and half is survival.
+                There is a border at ${worldConfig.borderAxis}=${worldConfig.borderLocation}.
+                Creative is on the ${worldConfig.creativeSide} side of the border.
+                You now have two inventories, one for each side of the border, which will be saved and restored automatically when you cross.
+                Have fun! (You can disable this message from showing using /understood) 
+            """.trimIndent()))
         }
     }
 
     @EventHandler
     fun onPlace(event: BlockPlaceEvent) {
-        if (!utils.worldEnabled(event.block.world)) {
-            return
-        }
-        if (utils.locationInBufferZone(event.block.location)) {
-            event.isCancelled = true
-        }
-        if (utils.locationOnSurvivalSide(event.block.location) && utils.locationInBufferZone(event.player.location)) {
-            event.isCancelled = true
-        }
+        handleBlockEvent(event, event.player)
     }
 
     @EventHandler
@@ -141,7 +137,7 @@ class SplitWorld : JavaPlugin(), Listener {
             event.player.health = 0.1
             event.isCancelled = true
         }
-        players_sleeping_in_nether.remove(event.player)
+        playersSleepingInNether.remove(event.player)
     }
 
     @EventHandler
@@ -156,15 +152,7 @@ class SplitWorld : JavaPlugin(), Listener {
 
     @EventHandler
     fun onBreak(event: BlockBreakEvent) {
-        if (!utils.worldEnabled(event.block.world)) {
-            return
-        }
-        if (utils.locationInBufferZone(event.block.location)) {
-            event.isCancelled = true
-        }
-        if (utils.locationOnSurvivalSide(event.block.location) && utils.locationInBufferZone(event.player.location)) {
-            event.isCancelled = true
-        }
+        handleBlockEvent(event, event.player)
     }
 
     @EventHandler
@@ -172,20 +160,20 @@ class SplitWorld : JavaPlugin(), Listener {
         val destination = event.to
         val player = event.player
         if (!utils.worldEnabled(destination.world)) {
-            player_utils.switchPlayerGameMode(player, default_game_mode)
+            playerUtils.switchPlayerGameMode(player, defaultGameMode)
             return
         }
         if (utils.locationInBufferZone(destination)) {
-            player_utils.switchPlayerGameMode(player, GameMode.SPECTATOR)
+            playerUtils.switchPlayerGameMode(player, GameMode.SPECTATOR)
             return
         } else if (utils.locationOnCreativeSide(destination)) {
-            player_utils.switchPlayerGameMode(player, GameMode.CREATIVE)
+            playerUtils.switchPlayerGameMode(player, GameMode.CREATIVE)
             return
         }
-        val needs_warp = player.gameMode != GameMode.SURVIVAL
-        player_utils.switchPlayerGameMode(player, GameMode.SURVIVAL)
-        if (needs_warp) {
-            player_utils.warpPlayerToGround(player, player.location)
+        val needsWarp = player.gameMode != GameMode.SURVIVAL
+        playerUtils.switchPlayerGameMode(player, GameMode.SURVIVAL)
+        if (needsWarp) {
+            playerUtils.warpPlayerToGround(player, player.location)
         }
     }
 
@@ -195,8 +183,8 @@ class SplitWorld : JavaPlugin(), Listener {
             return
         }
         val player = event.player
-        val player_pdc = player.persistentDataContainer
-        val disabled = player_pdc.get(keys.split_world_disabled, PersistentDataType.INTEGER)
+        val playerPdc = player.persistentDataContainer
+        val disabled = playerPdc.get(keys.splitWorldDisabled, PersistentDataType.INTEGER)
         if (disabled != null && disabled == 1) {
             return
         }
@@ -204,26 +192,27 @@ class SplitWorld : JavaPlugin(), Listener {
         // handle transitioning to survival safely
         if (player.gameMode != GameMode.SURVIVAL && utils.locationOnSurvivalSide(event.to) && utils.locationOnSurvivalSide(player.location)) {
             // temporarily load survival inv to check equip status
-            player_utils.loadPlayerInventory(player, GameMode.SURVIVAL)
-            val player_has_elytra_equipped = player.inventory.chestplate != null && player.inventory.chestplate!!.type == Material.ELYTRA
+            playerUtils.loadPlayerInventory(player)
+            val playerHasElytraEquipped = player.inventory.chestplate != null && player.inventory.chestplate!!.type == Material.ELYTRA
             player.inventory.clear()
-            if (player_has_elytra_equipped && player.location.block.type == Material.AIR) {
+          player.enderChest.contents
+            if (playerHasElytraEquipped && player.location.block.type == Material.AIR) {
                 player.isGliding = true
             }
-            if (!player_has_elytra_equipped && utils.locationOnSurvivalSide(player.location) && player_utils.playerInAir(player)) {
+            if (!playerHasElytraEquipped && utils.locationOnSurvivalSide(player.location) && playerUtils.playerInAir(player)) {
                 player.velocity = Vector(0, 0, 0)
-                player_utils.warpPlayerToGround(player, player.location)
+                playerUtils.warpPlayerToGround(player, player.location)
             }
         }
-        player_utils.switchPlayerToConfiguredGameMode(player)
+        playerUtils.switchPlayerToConfiguredGameMode(player)
         if (utils.playerInBufferZone(player)) {
             player.inventory.clear()
-            val next_location = event.to
-            if (!utils.locationIsTraversable(next_location)) {
+            val nextLocation = event.to
+            if (!utils.locationIsTraversable(nextLocation)) {
                 event.isCancelled = true
             }
         }
-        player_utils.convertBufferZoneBlocksAroundPlayer(player)
+        playerUtils.convertBufferZoneBlocksAroundPlayer(player)
     }
 
     @EventHandler
@@ -231,20 +220,20 @@ class SplitWorld : JavaPlugin(), Listener {
         if (!utils.worldEnabled(event.player.world)) {
             return
         }
-        player_utils.switchPlayerToConfiguredGameMode(event.player)
+        playerUtils.switchPlayerToConfiguredGameMode(event.player)
     }
 
     @EventHandler
     fun onPlayerRespawn(event: PlayerRespawnEvent) {
-        val custom_respawn = config.getBoolean("custom_respawn", false)
-        val coordinates = Arrays.stream(config.getString("respawn_coordinates")!!.split(" ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()).map { s: String -> s.toDouble() }.toList()
-        if (custom_respawn && !event.isAnchorSpawn && !event.isBedSpawn) {
+        val customRespawn = config.getBoolean("custom_respawn", false)
+        val coordinates = utils.getSpawnCoordinates(config)
+        if (customRespawn && !event.isAnchorSpawn && !event.isBedSpawn) {
             event.respawnLocation = Location(event.respawnLocation.world, coordinates[0], coordinates[1], coordinates[2], -88f, 6f)
         }
         if (utils.locationOnSurvivalSide(event.respawnLocation)) {
-            player_utils.switchPlayerGameMode(event.player, GameMode.SURVIVAL)
+            playerUtils.switchPlayerGameMode(event.player, GameMode.SURVIVAL)
         } else {
-            player_utils.switchPlayerGameMode(event.player, GameMode.CREATIVE)
+            playerUtils.switchPlayerGameMode(event.player, GameMode.CREATIVE)
         }
     }
 
@@ -273,7 +262,7 @@ class SplitWorld : JavaPlugin(), Listener {
         if (!utils.worldEnabled(event.entity.world)) {
             return
         }
-        dropped_items.add(event.entity)
+        droppedItems.add(event.entity)
     }
 
     @EventHandler
@@ -292,8 +281,8 @@ class SplitWorld : JavaPlugin(), Listener {
             return
         }
         val entity = event.entity
-        val entity_next_location = event.to
-        val entity_world_name = entity_next_location.world.name
+        val entityNextLocation = event.to
+        val entityWorldName = entityNextLocation.world.name
 
         // only do this if players are online
         if (entity.server.onlinePlayers.isEmpty()) {
@@ -304,17 +293,17 @@ class SplitWorld : JavaPlugin(), Listener {
             return
         }
         // Make sure it's in an enabled world
-        if (!world_configs.containsKey(entity_world_name) || !world_configs[entity_world_name]!!.enabled) {
+        if (!worldConfigs.containsKey(entityWorldName) || !worldConfigs[entityWorldName]!!.enabled) {
             return
         }
 
         // stop no crossing unless you are a player
-        if (utils.locationInBufferZone(entity_next_location)) {
+        if (utils.locationInBufferZone(entityNextLocation)) {
             event.isCancelled = true
         }
 
         // only monsters on survival side
-        if (entity is Monster && utils.locationOnCreativeSide(entity_next_location) && utils.getWorldConfig(entity.getWorld()).no_creative_monsters) {
+        if (entity is Monster && utils.locationOnCreativeSide(entityNextLocation) && utils.getWorldConfig(entity.world).noCreativeMonsters) {
             entity.remove()
         }
     }
@@ -335,7 +324,7 @@ class SplitWorld : JavaPlugin(), Listener {
         if (!utils.worldEnabled(world)) {
             return
         }
-        if (!utils.locationOnSurvivalSide(event.location) && event.spawnReason == CreatureSpawnEvent.SpawnReason.NATURAL && utils.getWorldConfig(world).no_creative_monsters
+        if (!utils.locationOnSurvivalSide(event.location) && event.spawnReason == CreatureSpawnEvent.SpawnReason.NATURAL && utils.getWorldConfig(world).noCreativeMonsters
                 && event.entity is Monster) {
             event.isCancelled = true
         }
@@ -353,12 +342,12 @@ class SplitWorld : JavaPlugin(), Listener {
 
     @EventHandler
     fun onSpawn(event: PlayerSpawnLocationEvent) {
-        val custom_respawn = config.getBoolean("custom_respawn", false)
-        val coordinates = Arrays.stream(config.getString("respawn_coordinates")!!.split(" ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()).map { s: String -> s.toDouble() }.toList()
-        val player_pdc = event.player.persistentDataContainer
-        val first_join = player_pdc.get(keys.first_join, PersistentDataType.INTEGER)
-        if (custom_respawn && (first_join == null || first_join != 1)) {
-            player_pdc.set(keys.first_join, PersistentDataType.INTEGER, 1)
+        val customRespawn = config.getBoolean("custom_respawn", false)
+        val coordinates = utils.getSpawnCoordinates(config)
+        val playerPdc = event.player.persistentDataContainer
+        val firstJoin = playerPdc.get(keys.firstJoin, PersistentDataType.INTEGER)
+        if (customRespawn && (firstJoin == null || firstJoin != 1)) {
+            playerPdc.set(keys.firstJoin, PersistentDataType.INTEGER, 1)
             event.spawnLocation = Location(event.player.world, coordinates[0], coordinates[1], coordinates[2], -88f, 6f)
         }
     }
@@ -376,11 +365,11 @@ class SplitWorld : JavaPlugin(), Listener {
         }
 
         //snark
-        val player_pdc = event.player.persistentDataContainer
-        val first_attempt = player_pdc.get(keys.first_fish_attempt, PersistentDataType.INTEGER)
-        if (first_attempt == null) {
+        val playerPdc = event.player.persistentDataContainer
+        val firstAttempt = playerPdc.get(keys.firstFishAttempt, PersistentDataType.INTEGER)
+        if (firstAttempt == null) {
             event.player.giveExp(100)
-            player_pdc.set(keys.first_fish_attempt, PersistentDataType.INTEGER, 1)
+            playerPdc.set(keys.firstFishAttempt, PersistentDataType.INTEGER, 1)
         }
         event.player.sendMessage("Nice try.")
     }
@@ -413,15 +402,15 @@ class SplitWorld : JavaPlugin(), Listener {
         if (event.item!!.type == Material.DIAMOND){
             event.player.playSound(event.player.location, Sound.ENTITY_GENERIC_EAT, 1.0f, 1.0f)
             event.player.inventory.getItem(event.player.inventory.indexOf(event.item!!))!!.subtract()
-            event.player.giveExp(50)
-            event.player.sendMessage("You ate a diamond you madlad!")
+            event.player.giveExpLevels(2)
+            event.player.sendMessage("You ate a diamond you absolute madlad!")
         }
     }
 
     @EventHandler
     fun enterBed(event: PlayerBedEnterEvent) {
-        val nether_egg_complete = Utils.getPdcInt(event.player, keys.nether_egg)
-        if (nether_egg_complete != null && nether_egg_complete >= 1561) {
+        val netherEggComplete = Utils.getPdcInt(event.player, keys.netherEgg)
+        if (netherEggComplete != null && netherEggComplete >= 1561) {
             return
         }
         if (event.bedEnterResult == BedEnterResult.NOT_POSSIBLE_HERE) {
@@ -432,8 +421,8 @@ class SplitWorld : JavaPlugin(), Listener {
 
     @EventHandler
     fun failEnterBed(event: PlayerBedFailEnterEvent) {
-        val nether_egg_complete = Utils.getPdcInt(event.player, keys.nether_egg)
-        if (nether_egg_complete != null && nether_egg_complete >= 1561) {
+        val netherEggComplete = Utils.getPdcInt(event.player, keys.netherEgg)
+        if (netherEggComplete != null && netherEggComplete >= 1561) {
             return
         }
         if (event.failReason == PlayerBedFailEnterEvent.FailReason.NOT_POSSIBLE_HERE) {
@@ -444,7 +433,7 @@ class SplitWorld : JavaPlugin(), Listener {
     @EventHandler
     fun enterDeepSleep(event: PlayerDeepSleepEvent) {
         if (event.player.world.name.endsWith("_nether")) {
-            players_sleeping_in_nether.add(event.player)
+            playersSleepingInNether.add(event.player)
             event.isCancelled = true
         }
     }
@@ -452,7 +441,19 @@ class SplitWorld : JavaPlugin(), Listener {
     @EventHandler
     fun leaveBed(event: PlayerBedLeaveEvent) {
         if (event.player.world.name.endsWith("_nether")) {
-            players_sleeping_in_nether.remove(event.player)
+            playersSleepingInNether.remove(event.player)
+        }
+    }
+
+    fun <T> handleBlockEvent(event: T, player: Player) where T : BlockEvent, T : Cancellable {
+        if (!utils.worldEnabled(event.block.world)) {
+            return
+        }
+        if (utils.locationInBufferZone(event.block.location)) {
+            event.isCancelled = true
+        }
+        if (utils.locationOnSurvivalSide(event.block.location) && utils.locationInBufferZone(player.location)) {
+            event.isCancelled = true
         }
     }
 }

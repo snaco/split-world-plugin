@@ -1,14 +1,15 @@
-package tech.snaco.SplitWorld
+package tech.snaco.split_world
 
 import org.bukkit.Location
 import org.bukkit.NamespacedKey
 import org.bukkit.World
+import org.bukkit.configuration.file.FileConfiguration
 import org.bukkit.entity.Player
 import org.bukkit.persistence.PersistentDataType
-import tech.snaco.SplitWorld.types.WorldConfig
+import tech.snaco.split_world.types.WorldConfig
 import java.util.*
 
-class Utils(private var world_configs: Map<String, WorldConfig>) {
+class Utils(private var worldConfigs: Map<String, WorldConfig>) {
     /* Location Methods */
 
     fun playerOnCreativeSide(player: Player): Boolean {
@@ -16,17 +17,17 @@ class Utils(private var world_configs: Map<String, WorldConfig>) {
     }
 
     fun locationOnCreativeSide(location: Location): Boolean {
-        val world_config: WorldConfig = getWorldConfig(location.world)
-        return if (world_config.creative_side == "negative" && locationOnNegativeSideOfBuffer(location)) {
+        val worldConfig: WorldConfig = getWorldConfig(location.world)
+        return if (worldConfig.creativeSide == "negative" && locationOnNegativeSideOfBuffer(location)) {
             true
-        } else world_config.creative_side == "positive" && locationOnPositiveSideOfBuffer(location)
+        } else worldConfig.creativeSide == "positive" && locationOnPositiveSideOfBuffer(location)
     }
 
     fun locationOnSurvivalSide(location: Location): Boolean {
-        val world_config: WorldConfig = getWorldConfig(location.world)
-        return if (world_config.creative_side == "negative" && locationOnPositiveSideOfBuffer(location)) {
+        val worldConfig: WorldConfig = getWorldConfig(location.world)
+        return if (worldConfig.creativeSide == "negative" && locationOnPositiveSideOfBuffer(location)) {
             true
-        } else world_config.creative_side == "positive" && locationOnNegativeSideOfBuffer(location)
+        } else worldConfig.creativeSide == "positive" && locationOnNegativeSideOfBuffer(location)
     }
 
     fun playerInBufferZone(player: Player): Boolean {
@@ -35,32 +36,32 @@ class Utils(private var world_configs: Map<String, WorldConfig>) {
 
     fun locationInBufferZone(location: Location): Boolean {
         val pos = getRelevantPos(location)
-        val world_config: WorldConfig = getWorldConfig(location.world)
-        return (pos >= world_config.border_location - world_config.border_width / 2.0
-                && pos < world_config.border_location + world_config.border_width / 2.0)
+        val worldConfig: WorldConfig = getWorldConfig(location.world)
+        return (pos >= worldConfig.borderLocation - worldConfig.borderWidth / 2.0
+                && pos < worldConfig.borderLocation + worldConfig.borderWidth / 2.0)
     }
 
     private fun locationOnPositiveSideOfBuffer(location: Location): Boolean {
-        val world_config: WorldConfig = getWorldConfig(location.world)
+        val worldConfig: WorldConfig = getWorldConfig(location.world)
         val pos = getRelevantPos(location)
-        return pos >= world_config.border_location + world_config.border_width / 2.0
+        return pos >= worldConfig.borderLocation + worldConfig.borderWidth / 2.0
     }
 
     private fun locationOnNegativeSideOfBuffer(location: Location): Boolean {
-        val world_config: WorldConfig = getWorldConfig(location.world)
+        val worldConfig: WorldConfig = getWorldConfig(location.world)
         val pos = getRelevantPos(location)
-        return pos < world_config.border_location - world_config.border_width / 2.0
+        return pos < worldConfig.borderLocation - worldConfig.borderWidth / 2.0
     }
 
     fun locationIsTraversable(location: Location): Boolean {
         val world = location.world
-        val block_type = world.getBlockAt(location).type
-        return !block_type.isSolid
+        val blockType = world.getBlockAt(location).type
+        return !blockType.isSolid
     }
 
     fun getRelevantPos(location: Location): Double {
-        val world_config: WorldConfig = getWorldConfig(location.world)
-        return when (world_config.border_axis?.uppercase(Locale.getDefault())) {
+        val worldConfig: WorldConfig = getWorldConfig(location.world)
+        return when (worldConfig.borderAxis?.uppercase(Locale.getDefault())) {
             "Y" -> location.y
             "Z" -> location.z
             else -> location.x
@@ -68,8 +69,8 @@ class Utils(private var world_configs: Map<String, WorldConfig>) {
     }
 
     fun addToRelevantPos(location: Location, value: Double): Location {
-        val world_config: WorldConfig = getWorldConfig(location.world)
-        return when (world_config.border_axis?.uppercase(Locale.getDefault())) {
+        val worldConfig: WorldConfig = getWorldConfig(location.world)
+        return when (worldConfig.borderAxis?.uppercase(Locale.getDefault())) {
             "Y" -> location.add(0.0, value, 0.0)
             "Z" -> location.add(0.0, 0.0, value)
             else -> location.add(value, 0.0, 0.0)
@@ -79,25 +80,29 @@ class Utils(private var world_configs: Map<String, WorldConfig>) {
     /* Misc. Utils */
 
     fun getWorldConfig(world: World): WorldConfig {
-        return world_configs[world.name]!!
+        return worldConfigs[world.name]!!
     }
 
     fun worldEnabled(world: World): Boolean {
-        val world_name = world.name
-        return world_configs.containsKey(world_name) && world_configs[world_name]!!.enabled
+        val worldName = world.name
+        return worldConfigs.containsKey(worldName) && worldConfigs[worldName]!!.enabled
     }
 
     fun closestSolidBlockBelowLocation(location: Location): Location {
         val loc = location.clone()
-        var block_found = false
-        while (!block_found) {
+        var blockFound = false
+        while (!blockFound) {
             loc.add(0.0, -1.0, 0.0)
             if (loc.block.isSolid) {
-                block_found = true
+                blockFound = true
             }
             if (loc.y <= -64) break
         }
         return loc
+    }
+
+    fun getSpawnCoordinates(config: FileConfiguration): List<Double> {
+        return config.getDoubleList("respawn_coordinates")
     }
 
     companion object {

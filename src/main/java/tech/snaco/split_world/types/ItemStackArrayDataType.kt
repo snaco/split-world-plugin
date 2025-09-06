@@ -1,24 +1,23 @@
-package tech.snaco.SplitWorld.types
+package tech.snaco.split_world.types
 
+import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataAdapterContext
 import org.bukkit.persistence.PersistentDataType
-import org.bukkit.potion.PotionEffect
 import org.bukkit.util.io.BukkitObjectInputStream
 import org.bukkit.util.io.BukkitObjectOutputStream
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
-import java.io.IOException
 
-class PotionEffectArrayDataType : PersistentDataType<ByteArray, Array<PotionEffect>> {
+class ItemStackArrayDataType : PersistentDataType<ByteArray, Array<ItemStack>> {
     override fun getPrimitiveType(): Class<ByteArray> {
         return ByteArray::class.java
     }
 
-    override fun getComplexType(): Class<Array<PotionEffect>> {
-        return Array<PotionEffect>::class.java
+    override fun getComplexType(): Class<Array<ItemStack>> {
+        return Array<ItemStack>::class.java
     }
 
-    override fun toPrimitive(complex: Array<PotionEffect>, context: PersistentDataAdapterContext): ByteArray {
+    override fun toPrimitive(complex: Array<ItemStack>, context: PersistentDataAdapterContext): ByteArray {
         try {
             ByteArrayOutputStream().use { output_stream ->
                 BukkitObjectOutputStream(output_stream).use { oos ->
@@ -27,18 +26,18 @@ class PotionEffectArrayDataType : PersistentDataType<ByteArray, Array<PotionEffe
                     return output_stream.toByteArray()
                 }
             }
-        } catch (e: IOException) {
+        } catch (e: Exception) {
             println("toPrimitive")
             println(e.message)
         }
         return ByteArray(0)
     }
 
-    override fun fromPrimitive(primitive: ByteArray, context: PersistentDataAdapterContext): Array<PotionEffect> {
+    override fun fromPrimitive(primitive: ByteArray, context: PersistentDataAdapterContext): Array<ItemStack> {
         try {
             ByteArrayInputStream(primitive).use { input_stream -> BukkitObjectInputStream(input_stream).use { ois ->
                 @Suppress("UNCHECKED_CAST")
-                return ois.readObject() as Array<PotionEffect>
+                return ois.readObject() as Array<ItemStack>
             } }
         } catch (e: Exception) {
             println("fromPrimitive")

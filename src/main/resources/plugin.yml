@@ -1,6 +1,6 @@
 name: SplitWorld
 version: 3.0.0
-main: tech.snaco.SplitWorld.SplitWorld
+main: tech.snaco.split_world.SplitWorld
 description: Splits the world into two game modes
 author: snaco
 website: https://papermc.io

@@ -1,55 +1,55 @@
-package tech.snaco.SplitWorld.extras.easter_eggs
+package tech.snaco.split_world.extras.easter_eggs
 
-import org.bukkit.ChatColor
+import net.kyori.adventure.text.format.TextColor
 import org.bukkit.entity.Player
-import tech.snaco.SplitWorld.SplitWorldKeys
-import tech.snaco.SplitWorld.Utils
+import tech.snaco.split_world.SplitWorldKeys
+import tech.snaco.split_world.Utils
 import java.util.*
 import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
 object Messages {
-    fun runNetherSleepTask(players_sleeping_in_nether: Set<Player>, keys: SplitWorldKeys) {
-        for (player in players_sleeping_in_nether) {
-            var throttle = Utils.getPdcInt(player, keys.nether_sleep_throttle)
-            var tock = Utils.getPdcInt(player, keys.nether_sleep_tock)
+    fun runNetherSleepTask(playersSleepingInNether: Set<Player>, keys: SplitWorldKeys) {
+        for (player in playersSleepingInNether) {
+            var throttle = Utils.getPdcInt(player, keys.netherSleepThrottle)
+            var tock = Utils.getPdcInt(player, keys.netherSleepTock)
             if (throttle == null) {
                 throttle = 100
-                Utils.setPdcInt(player, keys.nether_sleep_throttle, throttle)
+                Utils.setPdcInt(player, keys.netherSleepThrottle, throttle)
             }
             if (tock == null) {
                 tock = 1
             }
             if (tock % throttle != 0) {
-                Utils.setPdcInt(player, keys.nether_sleep_tock, ++tock)
+                Utils.setPdcInt(player, keys.netherSleepTock, ++tock)
             } else {
                 tock = 1
-                Utils.setPdcInt(player, keys.nether_sleep_tock, tock)
+                Utils.setPdcInt(player, keys.netherSleepTock, tock)
 
-                var sleep_score = Utils.getPdcInt(player, keys.sleep_in_nether_score)
-                if (sleep_score == null) {
-                    sleep_score = 0
+                var sleepScore = Utils.getPdcInt(player, keys.sleepInNetherScore)
+                if (sleepScore == null) {
+                    sleepScore = 0
                 }
-                if (sleep_score < nether_sleep_messages.size) {
-                    player.sendMessage(ChatColor.RED.toString() + decrypt(nether_sleep_messages[sleep_score]))
-                    Utils.setPdcInt(player, keys.sleep_in_nether_score, ++sleep_score)
+                if (sleepScore < nether_sleep_messages.size) {
+                    player.sendMessage(TextColor.color(255, 0, 0).toString() + decrypt(nether_sleep_messages[sleepScore]))
+                    Utils.setPdcInt(player, keys.sleepInNetherScore, ++sleepScore)
                 } else {
                     if (throttle == 100) {
                         throttle = 1
-                        Utils.setPdcInt(player, keys.nether_sleep_throttle, throttle)
+                        Utils.setPdcInt(player, keys.netherSleepThrottle, throttle)
                     }
-                    var bee_score = Utils.getPdcInt(player, keys.nether_egg)
-                    if (bee_score == null) {
-                        bee_score = 0
+                    var beeScore = Utils.getPdcInt(player, keys.netherEgg)
+                    if (beeScore == null) {
+                        beeScore = 0
                     }
-                    if (bee_score < nether_sleep_egg.size) {
-                        player.sendMessage(ChatColor.YELLOW.toString() + decrypt(nether_sleep_egg[bee_score]))
-                        Utils.setPdcInt(player, keys.nether_egg, ++bee_score)
-                    } else if (bee_score == nether_sleep_egg.size) {
-                        player.sendMessage(decrypt(after_nether_egg))
+                    if (beeScore < nether_sleep_egg.size) {
+                        player.sendMessage(TextColor.color(255, 255, 0).toString() + decrypt(nether_sleep_egg[beeScore]))
+                        Utils.setPdcInt(player, keys.netherEgg, ++beeScore)
+                    } else if (beeScore == nether_sleep_egg.size) {
+                        player.sendMessage(decrypt(AFTER_NETHER_EGG))
                         player.giveExp(69420)
-                        Utils.setPdcInt(player, keys.nether_egg, ++bee_score)
+                        Utils.setPdcInt(player, keys.netherEgg, ++beeScore)
                     }
                 }
             }
@@ -67,7 +67,7 @@ object Messages {
             "9wMKItUOWHppVW+pA9EmwC8XxssaUWRHMIwT+PwJPiC3crSGoPgVCFXU4RYJ/6IZcqWirl17mLTK1yQXmiPC0wbBT5J+hQZYXpWqjMEUaSWbPqXj+qpniwwsIfBlZwuk+pLPkXOQ8uAGdCh+Xd50UXNse+yL+F5MqRz9ymC9ucNrZswD+GKaq8lzpF5+P9lP",
             "VbsATSLndhZ4+ybJFyCsSawypFS5ploTY5KLZcD51Y8dkqF25Qprb4LoQOA2bKP5K/ZeeCIXHrC5A/KgoWG4jQ==",
             )
-    private const val after_nether_egg = "pZEMkQjeKLX/DXTnEh0COAHbceVvHShpT3DQwL0QHZFFy20ip9bIpASz9wOHKbFe4g1ZxM3XMES1Lf0YNQ0WgIfPRdznMAHZCf6GFAiTY1wBCZEg9GQSi5Lu+4SgaC2CMNa8kwysMzvLg1furshPt0i/aZU1Pv1sR0zvUNlneSQ="
+    private const val AFTER_NETHER_EGG = "pZEMkQjeKLX/DXTnEh0COAHbceVvHShpT3DQwL0QHZFFy20ip9bIpASz9wOHKbFe4g1ZxM3XMES1Lf0YNQ0WgIfPRdznMAHZCf6GFAiTY1wBCZEg9GQSi5Lu+4SgaC2CMNa8kwysMzvLg1furshPt0i/aZU1Pv1sR0zvUNlneSQ="
     private val nether_sleep_egg = listOf<String>(
             "XlCs6OnM8aeFWr2eHjmClL4pC7fwArMYzVBXNJcUNW/IPye6qcqBOzjr8Pv82MM2xWdAVQt+A7f8dIzVa0nDVm+BeklndSBe6J7d35PHvl+mxNBhc68KGilXoBcDTfqM",
             "ku3cA3GDp3Q7+AT7biSGg24lc98qrTKixJ1MwQwM5OZtDezQwLfeenc4vSfvYqYULoTTbCZpIgIcKSKakXS6rAUhuR+i/yD/nsi/Pc/LhhM=",
@@ -1639,18 +1639,18 @@ object Messages {
     private val key = SecretKeySpec("1234567890123456".toByteArray(), "AES")
     private val iv = IvParameterSpec(ByteArray(16))
 
-    private fun decrypt(encrypted_string: String): String {
+    private fun decrypt(encryptedString: String): String {
         val cipher = Cipher.getInstance(ALGORITHM)
         cipher.init(Cipher.DECRYPT_MODE, key, iv)
-        val plain_string = cipher.doFinal(Base64.getDecoder().decode(encrypted_string))
-        return String(plain_string)
+        val plainString = cipher.doFinal(Base64.getDecoder().decode(encryptedString))
+        return String(plainString)
     }
 
     @Suppress("unused")
-    private fun encrypt(plain_string: String): String {
+    private fun encrypt(plainString: String): String {
         val cipher = Cipher.getInstance(ALGORITHM)
         cipher.init(Cipher.ENCRYPT_MODE, key, iv)
-        val encrypted_string = cipher.doFinal(plain_string.toByteArray())
-        return Base64.getEncoder().encodeToString(encrypted_string)
+        val encryptedString = cipher.doFinal(plainString.toByteArray())
+        return Base64.getEncoder().encodeToString(encryptedString)
     }
 }
