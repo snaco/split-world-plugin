@@ -33,4 +33,13 @@ class SplitWorldKeys(private var splitWorld: SplitWorld) {
       GameMode.SPECTATOR -> NamespacedKey(splitWorld, player.name + "_spectator_eff")
     }
   }
+
+  fun getPlayerEnderChestContentsKey(player: Player): NamespacedKey {
+    return when (player.gameMode) {
+      GameMode.CREATIVE -> NamespacedKey(splitWorld, player.name + "_creative_ender_chest")
+      GameMode.SURVIVAL -> NamespacedKey(splitWorld, player.name + "_survival_ender_chest")
+      GameMode.ADVENTURE -> NamespacedKey(splitWorld, player.name + "_adventure_ender_chest")
+      GameMode.SPECTATOR -> NamespacedKey(splitWorld, player.name + "_spectator_ender_chest")
+    }
+  }
 }
