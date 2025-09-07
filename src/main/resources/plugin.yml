@@ -4,7 +4,7 @@ main: tech.snaco.split_world.SplitWorld
 description: Splits the world into two game modes
 author: snaco
 website: https://papermc.io
-api-version: 1.19
+api-version: 1.21
 commands:
   understood:
     description: You understand the nature of the split world and don't want to see the welcome message anymore.
