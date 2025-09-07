@@ -8,6 +8,9 @@ default_game_mode: "survival"
 # Disables the welcome message for everyone when set to true, default is false
 disable_welcome_message: false
 
+# Enables some surprise easter eggs.
+enable_easter_eggs: false
+
 # allows players to use fill, setblock, and clone on the creative side. Make sure that by
 # default these players have permission to use them then split-world will make sure they
 # can't use it on or targeting blocks outside of creative zones

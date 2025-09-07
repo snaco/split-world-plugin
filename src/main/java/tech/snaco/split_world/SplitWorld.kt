@@ -56,6 +56,7 @@ class SplitWorld : JavaPlugin(), Listener {
   private var commandHandler: SplitWorldCommands =
     SplitWorldCommands(keys, playerUtils, worldConfigs, config.getBoolean("manage_creative_commands", true))
   private var playersSleepingInNether = HashSet<Player>()
+  private var easterEggsEnabled: Boolean = config.getBoolean("easter_eggs_enabled", false)
 
   override fun onEnable() {
     saveDefaultConfig()
@@ -77,11 +78,13 @@ class SplitWorld : JavaPlugin(), Listener {
       }
     }.runTaskTimer(this, 0, 1L)
 
-    object : BukkitRunnable() {
-      override fun run() {
-        Messages.runNetherSleepTask(playersSleepingInNether, keys)
-      }
-    }.runTaskTimer(this, 20L, 1L)
+    if (easterEggsEnabled) {
+      object : BukkitRunnable() {
+        override fun run() {
+          Messages.runNetherSleepTask(playersSleepingInNether, keys)
+        }
+      }.runTaskTimer(this, 20L, 1L)
+    }
   }
 
   /* Commands */
@@ -416,51 +419,61 @@ class SplitWorld : JavaPlugin(), Listener {
     if (event.item == null) {
       return
     }
-    if (event.item!!.type == Material.DIAMOND) {
-      event.player.playSound(event.player.location, Sound.ENTITY_GENERIC_EAT, 1.0f, 1.0f)
-      event.player.inventory
-        .getItem(event.player.inventory.indexOf(event.item!!))!!
-        .subtract()
-      event.player.giveExpLevels(2)
-      event.player.sendMessage("You ate a diamond you absolute madlad!")
+    if (easterEggsEnabled) {
+      if (event.item!!.type == Material.DIAMOND) {
+        event.player.playSound(event.player.location, Sound.ENTITY_GENERIC_EAT, 1.0f, 1.0f)
+        event.player.inventory
+          .getItem(event.player.inventory.indexOf(event.item!!))!!
+          .subtract()
+        event.player.giveExpLevels(2)
+        event.player.sendMessage("You ate a diamond you absolute madlad!")
+      }
     }
   }
 
   @EventHandler
   fun enterBed(event: PlayerBedEnterEvent) {
-    val netherEggComplete = Utils.getPdcInt(event.player, keys.netherEgg)
-    if (netherEggComplete != null && netherEggComplete >= 1561) {
-      return
-    }
-    if (event.bedEnterResult == BedEnterResult.NOT_POSSIBLE_HERE) {
-      event.setUseBed(Event.Result.ALLOW)
-      event.player.sendMessage("Didn't expect that did you?")
+    if (easterEggsEnabled) {
+      val netherEggComplete = Utils.getPdcInt(event.player, keys.netherEgg)
+      if (netherEggComplete != null && netherEggComplete >= 1561) {
+        return
+      }
+      if (event.bedEnterResult == BedEnterResult.NOT_POSSIBLE_HERE) {
+        event.setUseBed(Event.Result.ALLOW)
+        event.player.sendMessage("Didn't expect that did you?")
+      }
     }
   }
 
   @EventHandler
   fun failEnterBed(event: PlayerBedFailEnterEvent) {
-    val netherEggComplete = Utils.getPdcInt(event.player, keys.netherEgg)
-    if (netherEggComplete != null && netherEggComplete >= 1561) {
-      return
-    }
-    if (event.failReason == PlayerBedFailEnterEvent.FailReason.NOT_POSSIBLE_HERE) {
-      event.isCancelled = true
+    if (easterEggsEnabled) {
+      val netherEggComplete = Utils.getPdcInt(event.player, keys.netherEgg)
+      if (netherEggComplete != null && netherEggComplete >= 1561) {
+        return
+      }
+      if (event.failReason == PlayerBedFailEnterEvent.FailReason.NOT_POSSIBLE_HERE) {
+        event.isCancelled = true
+      }
     }
   }
 
   @EventHandler
   fun enterDeepSleep(event: PlayerDeepSleepEvent) {
-    if (event.player.world.name.endsWith("_nether")) {
-      playersSleepingInNether.add(event.player)
-      event.isCancelled = true
+    if (easterEggsEnabled) {
+      if (event.player.world.name.endsWith("_nether")) {
+        playersSleepingInNether.add(event.player)
+        event.isCancelled = true
+      }
     }
   }
 
   @EventHandler
   fun leaveBed(event: PlayerBedLeaveEvent) {
-    if (event.player.world.name.endsWith("_nether")) {
-      playersSleepingInNether.remove(event.player)
+    if (easterEggsEnabled) {
+      if (event.player.world.name.endsWith("_nether")) {
+        playersSleepingInNether.remove(event.player)
+      }
     }
   }
 
