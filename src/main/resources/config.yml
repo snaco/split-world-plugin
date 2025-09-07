@@ -24,9 +24,9 @@ manage_creative_commands: true
 # set a custom respawn point, allows you to spawn underground but not in solid blocks.
 custom_respawn: false
 respawn_coordinates:
-  - x: 140
-  - y: 53
-  - z: -64
+  - x: 140.0
+  - y: 53.0
+  - z: -64.0
 
 # custom spawn protection
 competition_area:
