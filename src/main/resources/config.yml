@@ -11,6 +11,11 @@ disable_welcome_message: false
 # Enables some surprise easter eggs.
 enable_easter_eggs: false
 
+# when set to true, this will change the XP loss behavior on death to lose a specified percentage of XP
+# upon death
+enable_xp_mod: false
+xp_loss_percentage: 25.0
+
 # allows players to use fill, setblock, and clone on the creative side. Make sure that by
 # default these players have permission to use them then split-world will make sure they
 # can't use it on or targeting blocks outside of creative zones

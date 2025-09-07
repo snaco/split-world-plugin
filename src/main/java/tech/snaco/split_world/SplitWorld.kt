@@ -57,6 +57,8 @@ class SplitWorld : JavaPlugin(), Listener {
     SplitWorldCommands(keys, playerUtils, worldConfigs, config.getBoolean("manage_creative_commands", true))
   private var playersSleepingInNether = HashSet<Player>()
   private var easterEggsEnabled: Boolean = config.getBoolean("easter_eggs_enabled", false)
+  private var xpModEnabled: Boolean = config.getBoolean("xp_mod_enabled", false)
+  private var xpLossPercentage: Double = config.getDouble("xp_loss_percentage", 25.0)
 
   override fun onEnable() {
     saveDefaultConfig()
@@ -141,8 +143,13 @@ class SplitWorld : JavaPlugin(), Listener {
 
   @EventHandler
   fun onDeath(event: PlayerDeathEvent) {
-    event.droppedExp = event.player.totalExperience / 4
-
+    if (easterEggsEnabled) {
+      playersSleepingInNether.remove(event.player)
+    }
+    if (xpModEnabled) {
+      event.droppedExp =
+        event.player.totalExperience - (event.player.totalExperience * (xpLossPercentage / 100)).toInt()
+    }
     if (!utils.worldEnabled(event.player.world)) {
       return
     }
@@ -150,7 +157,6 @@ class SplitWorld : JavaPlugin(), Listener {
       event.player.health = 0.1
       event.isCancelled = true
     }
-    playersSleepingInNether.remove(event.player)
   }
 
   @EventHandler
