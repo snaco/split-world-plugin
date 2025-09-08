@@ -54,7 +54,7 @@ class SplitWorld : JavaPlugin(), Listener {
   private var utils: Utils = Utils(worldConfigs)
   private var playerUtils: PlayerUtils = PlayerUtils(utils, keys, defaultGameMode)
   private var commandHandler: SplitWorldCommands =
-    SplitWorldCommands(keys, playerUtils, worldConfigs, config.getBoolean("manage_creative_commands", true))
+    SplitWorldCommands(keys, playerUtils, worldConfigs, config)
   private var playersSleepingInNether = HashSet<Player>()
   private var easterEggsEnabled: Boolean = config.getBoolean("easter_eggs_enabled", false)
   private var xpModEnabled: Boolean = config.getBoolean("xp_mod_enabled", false)

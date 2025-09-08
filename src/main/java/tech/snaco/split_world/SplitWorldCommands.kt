@@ -4,15 +4,19 @@ import org.bukkit.GameMode
 import org.bukkit.Location
 import org.bukkit.command.Command
 import org.bukkit.command.CommandSender
+import org.bukkit.configuration.file.FileConfiguration
 import org.bukkit.entity.Player
 import org.bukkit.event.player.PlayerCommandPreprocessEvent
 import org.bukkit.persistence.PersistentDataType
 import tech.snaco.split_world.types.WorldConfig
 
 class SplitWorldCommands(
-  private var keys: SplitWorldKeys, private var playerUtils: PlayerUtils, worldConfigs: Map<String, WorldConfig>,
-  private var manageCreativeCommands: Boolean
+  private var keys: SplitWorldKeys,
+  private var playerUtils: PlayerUtils, worldConfigs: Map<String, WorldConfig>,
+  config: FileConfiguration,
 ) {
+  private var manageCreativeCommands: Boolean = config.getBoolean("manage_creative_commands", false)
+  private var creativeCommands: List<String> = config.getStringList("creative_commands")
   private var utils = Utils(worldConfigs)
   private var numberOfWorldsEnabled = worldConfigs.values
     .stream()
@@ -36,7 +40,6 @@ class SplitWorldCommands(
     }
 
     // creative commands allowed in the creative zones, these will be blocked in survival mode
-    val creativeCommands = listOf("/fill", "/clone", "/setblock")
     val player = event.player
     val commandStr = event.message
     val commandArgs = commandStr
@@ -53,8 +56,8 @@ class SplitWorldCommands(
     }
 
     // block creative command in survival
-    if (player.gameMode == GameMode.SURVIVAL) {
-      player.sendMessage("You cannot use the " + commandArgs[0] + " command in survival.")
+    if (player.gameMode != GameMode.SURVIVAL) {
+      player.sendMessage("You cannot use the " + commandArgs[0] + " command in ${player.gameMode}.")
       event.isCancelled = true
       return
     }
