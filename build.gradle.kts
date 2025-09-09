@@ -1,12 +1,12 @@
 plugins {
   id("java")
   kotlin("jvm") version "2.2.10"
-  id("com.github.johnrengelman.shadow") version "7.1.2"
+  id("com.github.johnrengelman.shadow") version "8.1.1"
   id("xyz.jpenilla.run-paper") version "2.3.1"
 }
 
 group = "tech.snaco"
-version = "3.1.0"
+version = "3.1.1"
 
 repositories {
   mavenCentral()
@@ -19,7 +19,6 @@ dependencies {
   compileOnly("io.papermc.paper:paper-api:1.21.8-R0.1-SNAPSHOT")
   compileOnly("org.apache.commons:commons-lang3:3.18.0")
   testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.1")
-  shadow(kotlin("stdlib-jdk8"))
 }
 
 tasks.getByName<Test>("test") {
@@ -38,4 +37,12 @@ tasks.withType(xyz.jpenilla.runtask.task.AbstractRun::class) {
     languageVersion = JavaLanguageVersion.of(21)
   }
   jvmArgs("-XX:+AllowEnhancedClassRedefinition")
+}
+
+tasks {
+  shadowJar {
+    archiveClassifier.set("")
+    exclude("META-INF/*.kotlin_module")
+  }
+  build { dependsOn(shadowJar) }
 }
