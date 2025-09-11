@@ -3,7 +3,8 @@ package tech.snaco.split_world.extras.easter_eggs
 import net.kyori.adventure.text.format.TextColor
 import org.bukkit.entity.Player
 import tech.snaco.split_world.SplitWorldKeys
-import tech.snaco.split_world.Utils
+import tech.snaco.split_world.utils.getPdcInt
+import tech.snaco.split_world.utils.setPdcInt
 import java.util.*
 import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
@@ -12,22 +13,22 @@ import javax.crypto.spec.SecretKeySpec
 object Messages {
   fun runNetherSleepTask(playersSleepingInNether: Set<Player>, keys: SplitWorldKeys) {
     for (player in playersSleepingInNether) {
-      var throttle = Utils.getPdcInt(player, keys.netherSleepThrottle)
-      var tock = Utils.getPdcInt(player, keys.netherSleepTock)
+      var throttle = player.getPdcInt(keys.netherSleepThrottle)
+      var tock = player.getPdcInt(keys.netherSleepTock)
       if (throttle == null) {
         throttle = 100
-        Utils.setPdcInt(player, keys.netherSleepThrottle, throttle)
+        player.setPdcInt(keys.netherSleepThrottle, throttle)
       }
       if (tock == null) {
         tock = 1
       }
       if (tock % throttle != 0) {
-        Utils.setPdcInt(player, keys.netherSleepTock, ++tock)
+        player.setPdcInt(keys.netherSleepTock, ++tock)
       } else {
         tock = 1
-        Utils.setPdcInt(player, keys.netherSleepTock, tock)
+        player.setPdcInt(keys.netherSleepTock, tock)
 
-        var sleepScore = Utils.getPdcInt(player, keys.sleepInNetherScore)
+        var sleepScore = player.getPdcInt(keys.sleepInNetherScore)
         if (sleepScore == null) {
           sleepScore = 0
         }
@@ -37,13 +38,13 @@ object Messages {
               .color(255, 0, 0)
               .toString() + decrypt(nether_sleep_messages[sleepScore])
           )
-          Utils.setPdcInt(player, keys.sleepInNetherScore, ++sleepScore)
+          player.setPdcInt(keys.sleepInNetherScore, ++sleepScore)
         } else {
           if (throttle == 100) {
             throttle = 1
-            Utils.setPdcInt(player, keys.netherSleepThrottle, throttle)
+            player.setPdcInt(keys.netherSleepThrottle, throttle)
           }
-          var beeScore = Utils.getPdcInt(player, keys.netherEgg)
+          var beeScore = player.getPdcInt(keys.netherEgg)
           if (beeScore == null) {
             beeScore = 0
           }
@@ -53,11 +54,11 @@ object Messages {
                 .color(255, 255, 0)
                 .toString() + decrypt(nether_sleep_egg[beeScore])
             )
-            Utils.setPdcInt(player, keys.netherEgg, ++beeScore)
+            player.setPdcInt(keys.netherEgg, ++beeScore)
           } else if (beeScore == nether_sleep_egg.size) {
             player.sendMessage(decrypt(AFTER_NETHER_EGG))
             player.giveExp(69420)
-            Utils.setPdcInt(player, keys.netherEgg, ++beeScore)
+            player.setPdcInt(keys.netherEgg, ++beeScore)
           }
         }
       }
