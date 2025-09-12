@@ -33,9 +33,7 @@ class BufferZoneListener : Listener {
 
   @EventHandler
   fun onPlayerMove(event: PlayerMoveEvent) {
-    val disabledForPlayer = event.player.getPdcInt(splitWorldConfig().keys.splitWorldDisabled)
-    val disabled = disabledForPlayer == null || disabledForPlayer != 1
-    if (event.player.world.isSplit() && !disabled) {
+    if (event.player.world.isSplit() && !event.player.splitDisabled()) {
       event.player.convertBufferZoneBlocks()
       if (event.player.location.inBufferZone()) {
         event.player.inventory.clear()

@@ -7,19 +7,11 @@ import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import org.bukkit.event.player.PlayerCommandPreprocessEvent
 import org.bukkit.persistence.PersistentDataType
-import tech.snaco.split_world.config.SplitWorldConfig
 import tech.snaco.split_world.utils.onCreativeSide
 import tech.snaco.split_world.utils.splitWorldConfig
 import tech.snaco.split_world.utils.switchToConfiguredGameMode
 
 class SplitWorldCommands() {
-  private val config = splitWorldConfig()
-  private var numberOfWorldsEnabled = config.worldConfigs.values
-    .stream()
-    .filter { world: SplitWorldConfig? ->
-      world?.enabled == true
-    }
-    .toList().size
 
   fun onTabComplete(command: Command, args: Array<out String>?): List<String>? {
     if (command.name.equals("play-border-sound", ignoreCase = true) && args!!.size == 1) {
@@ -31,12 +23,12 @@ class SplitWorldCommands() {
   }
 
   fun preProcessCommand(event: PlayerCommandPreprocessEvent) {
-    if (!config.manageCreativeCommands || event.player.isOp) {
+    if (!splitWorldConfig().manageCreativeCommands() || event.player.isOp) {
       return
     }
 
     // creative commands allowed in the creative zones, these will be blocked in survival mode
-    val creativeCommands = config.creativeCommands
+    val creativeCommands = splitWorldConfig().creativeCommands()
     val player = event.player
     val commandStr = event.message
     val commandArgs = commandStr
@@ -62,7 +54,12 @@ class SplitWorldCommands() {
     val locations: List<Location> = getLocations(coordinates, player) ?: return
     for (location in locations) {
       if (!location.onCreativeSide()) {
-        if (numberOfWorldsEnabled >= 1) {
+
+        if (splitWorldConfig()
+            .worldConfigs()
+            .filter { it.value.enabled() }
+            .isNotEmpty()
+        ) {
           player.sendMessage("The " + commandArgs[0] + " command cannot include blocks outside the creative side of this world")
           event.isCancelled = true
           // we don't need to evaluate any more locations after finding one out of bounds
@@ -83,9 +80,9 @@ class SplitWorldCommands() {
         return false
       }
       if (args[0].equals("true", ignoreCase = true)) {
-        playerPdc.set(config.keys.playBorderSound, PersistentDataType.INTEGER, 1)
+        playerPdc.set(splitWorldConfig().keys.playBorderSound, PersistentDataType.INTEGER, 1)
       } else if (args[0].equals("false", ignoreCase = true)) {
-        playerPdc.set(config.keys.playBorderSound, PersistentDataType.INTEGER, 0)
+        playerPdc.set(splitWorldConfig().keys.playBorderSound, PersistentDataType.INTEGER, 0)
       } else {
         return false
       }
@@ -101,11 +98,11 @@ class SplitWorldCommands() {
       val targetPlayer = server.getPlayer(args[0]) ?: return false
       val targetPlayerPdc = targetPlayer.persistentDataContainer
       if (args[1].equals("true", ignoreCase = true)) {
-        targetPlayerPdc.set(config.keys.spawnBuilder, PersistentDataType.INTEGER, 1)
+        targetPlayerPdc.set(splitWorldConfig().keys.spawnBuilder, PersistentDataType.INTEGER, 1)
         println(targetPlayer.name + "is now a spawn builder.")
         targetPlayer.sendMessage("You now have permission to build in the spawn area.")
       } else if (args[1].equals("false", ignoreCase = true)) {
-        targetPlayerPdc.set(config.keys.spawnBuilder, PersistentDataType.INTEGER, 0)
+        targetPlayerPdc.set(splitWorldConfig().keys.spawnBuilder, PersistentDataType.INTEGER, 0)
         println(targetPlayer.name + "is no longer a spawn builder.")
         targetPlayer.sendMessage("You no longer have permission to build in the spawn area.")
       } else {
@@ -114,23 +111,23 @@ class SplitWorldCommands() {
       return true
     }
 
-    //dismiss welcome message permanently
+    //dismiss welcome_message permanently
     if (command.name.equals("understood", ignoreCase = true)) {
-      playerPdc.set(config.keys.noWelcome, PersistentDataType.INTEGER, 1)
+      playerPdc.set(splitWorldConfig().keys.noWelcome, PersistentDataType.INTEGER, 1)
       player.sendMessage("You will no longer see the welcome message for split world.")
       return true
     }
 
     if (command.name.equals("disable-split-world", ignoreCase = true)) {
       if (player.hasPermission("split-world.disable-split-world")) {
-        playerPdc.set(config.keys.splitWorldDisabled, PersistentDataType.INTEGER, 1)
+        playerPdc.set(splitWorldConfig().keys.splitWorldDisabled, PersistentDataType.INTEGER, 1)
       }
       return true
     }
 
     if (command.name.equals("enable-split-world", ignoreCase = true)) {
       if (player.hasPermission("split-world.enable-split-world")) {
-        playerPdc.set(config.keys.splitWorldDisabled, PersistentDataType.INTEGER, 0)
+        playerPdc.set(splitWorldConfig().keys.splitWorldDisabled, PersistentDataType.INTEGER, 0)
       }
       player.switchToConfiguredGameMode()
       return true
@@ -185,5 +182,4 @@ class SplitWorldCommands() {
     }
     return locations
   }
-
 }

@@ -16,6 +16,10 @@ private fun getPlugin(): SplitWorldPlugin {
     .getPlugin("SplitWorld") as? SplitWorldPlugin ?: error("SplitWorld plugin not loaded!")
 }
 
+fun Player.splitDisabled(): Boolean {
+  return getPdcInt(splitWorldConfig().keys.splitWorldDisabled) == 1
+}
+
 fun Player.getInventoryKey(): NamespacedKey {
   return NamespacedKey(getPlugin(), name + "_" + gameMode.name.lowercase() + "_inv")
 }
@@ -128,7 +132,11 @@ fun Player.switchGameMode(gameMode: GameMode) {
 
 fun Player.switchToConfiguredGameMode() {
   if (!this.world.isSplit()) {
-    switchGameMode(world.splitConfig().defaultGameMode)
+    switchGameMode(
+      world
+        .splitConfig()
+        .defaultGameMode()
+    )
     return
   }
   // set to spectator for buffer zone
@@ -139,7 +147,7 @@ fun Player.switchToConfiguredGameMode() {
       isFlying = true
     }
 
-    //keep player health and hunger static while in the border, ie no healing or dying here
+    //keep player health and hunger static while in the buffer, no healing or dying here
     foodLevel = foodLevel
     health = health
     // creative side
@@ -153,27 +161,43 @@ fun Player.switchToConfiguredGameMode() {
 
 fun Player.convertBufferZoneBlocks() {
   val playerLocation = location.clone()
-  val config = splitWorldConfig()
-  val start = world.splitConfig().borderLocation - world.splitConfig().borderWidth / 2
-  val end = world.splitConfig().borderLocation + world.splitConfig().borderWidth / 2
+  val start = world
+    .splitConfig()
+    .borderLocation() - world
+    .splitConfig()
+    .borderWidth()
+  val end = world
+    .splitConfig()
+    .borderLocation() + world
+    .splitConfig()
+    .borderWidth()
   for (i in start until end) {
     for (j in -5..4) {
-      for (y in -64..318) {
+      // Use world's height range instead of hardcoded values
+      val minY = world.minHeight
+      val maxYExclusive = world.maxHeight
+      for (y in minY until maxYExclusive) {
         val loc = playerLocation.clone()
         loc.y = y.toDouble()
-        if (world.splitConfig().borderAxis == "X") {
+        if (world
+            .splitConfig()
+            .borderAxis() == "X"
+        ) {
           loc.x = i.toDouble()
           loc.z += j
         } else {
           loc.z = i.toDouble()
           loc.x += j
         }
-        val blockType = world.getBlockAt(loc).type
-        if (blockType != Material.AIR && blockType != Material.WATER && blockType != Material.LAVA) {
-          world.getBlockAt(loc).type = Material.BEDROCK
-        } else if (blockType == Material.WATER || blockType == Material.LAVA) {
-          world.getBlockAt(loc).type = Material.AIR
+        val block = world.getBlockAt(loc)
+        val blockType = block.type
+
+        // Avoid Kotlin enum when-switch mapping to prevent NPE
+        if (blockType.isAir || blockType == Material.LAVA || blockType == Material.SNOW) {
+          continue
         }
+
+        block.type = Material.WHITE_CONCRETE
       }
     }
   }

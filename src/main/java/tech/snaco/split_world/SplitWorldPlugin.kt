@@ -8,15 +8,24 @@ import org.bukkit.event.Listener
 import org.bukkit.event.player.PlayerCommandPreprocessEvent
 import org.bukkit.plugin.java.JavaPlugin
 import tech.snaco.split_world.listener.*
-import tech.snaco.split_world.utils.loadSplitWorldConfig
+import tech.snaco.split_world.utils.loadSplitWorld
 import tech.snaco.split_world.utils.registerEvents
+import tech.snaco.split_world.utils.unloadSplitWorld
 
 @Suppress("UNCHECKED_CAST")
 class SplitWorldPlugin : JavaPlugin(), Listener {
   private lateinit var commandHandler: SplitWorldCommands
 
+  override fun onDisable() {
+    server.unloadSplitWorld()
+  }
+
+  override fun reloadConfig() {
+    super.reloadConfig()
+  }
+
   override fun onEnable() {
-    server.loadSplitWorldConfig(this)
+    server.loadSplitWorld(this)
     commandHandler = SplitWorldCommands()
     Bukkit
       .getPluginManager()

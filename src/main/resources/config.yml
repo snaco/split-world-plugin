@@ -68,7 +68,9 @@ world_configs:
 
     # REQUIRED when enabled: true
     # defines the width of the border, while in this zone players will be put in adventure mode, hunger will not deplete
-    border_width: 10
+    # this is how many blocks on each side of the border will be considered buffer zones.
+    # The total size of the border is border_width * 2
+    border_width: 5
 
     # REQUIRED when enabled: true
     # Replace all blocks with bedrock along the border as players encounter it.

@@ -22,7 +22,9 @@ class MonsterListener : Listener {
     }
     if (!event.location.onDefaultSide()
       && event.spawnReason == CreatureSpawnEvent.SpawnReason.NATURAL
-      && world.splitConfig().noCreativeMonsters
+      && world
+        .splitConfig()
+        .noCreativeMonsters()
       && event.entity is Monster
     ) {
       event.isCancelled = true
@@ -56,10 +58,12 @@ class MonsterListener : Listener {
     if (event.to.inBufferZone()) {
       event.isCancelled = true
     }
-    // only remove monsters on creative side
+    // only remove monsters on the creative side
     if (event.entity is Monster
       && event.to.onCreativeSide()
-      && event.entity.world.splitConfig().noCreativeMonsters
+      && event.entity.world
+        .splitConfig()
+        .noCreativeMonsters()
     ) {
       event.entity.remove()
     }

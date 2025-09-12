@@ -18,7 +18,11 @@ class GameModeListener : Listener {
     val destination = event.to
     val player = event.player
     if (!destination.world.isSplit()) {
-      player.switchGameMode(destination.world.splitConfig().defaultGameMode)
+      player.switchGameMode(
+        destination.world
+          .splitConfig()
+          .defaultGameMode()
+      )
       return
     }
     if (destination.inBufferZone()) {
@@ -37,8 +41,11 @@ class GameModeListener : Listener {
 
   @EventHandler
   fun onPlayerMove(event: PlayerMoveEvent) {
-    val enabled = event.player.getPdcInt(splitWorldConfig().keys.splitWorldDisabled) != 1
-    if (event.player.world.isSplit() && enabled) {
+    if (event.player.splitDisabled()) {
+      return
+    }
+    event.player.switchToConfiguredGameMode()
+    if (event.player.world.isSplit()) {
       // handle transitioning to survival safely
       if (event.player.gameMode != GameMode.SURVIVAL
         && event.to.onDefaultSide()
@@ -46,8 +53,7 @@ class GameModeListener : Listener {
       ) {
         // temporarily load survival inv to check equip status
         event.player.loadInventory()
-        val playerHasElytraEquipped =
-          event.player.inventory.chestplate != null && event.player.inventory.chestplate!!.type == Material.ELYTRA
+        val playerHasElytraEquipped = event.player.inventory.chestplate?.type == Material.ELYTRA
         event.player.inventory.clear()
         event.player.enderChest.contents
         if (playerHasElytraEquipped && event.player.location.block.type == Material.AIR) {
@@ -58,7 +64,6 @@ class GameModeListener : Listener {
           event.player.warpToGround()
         }
       }
-      event.player.switchToConfiguredGameMode()
     }
   }
 

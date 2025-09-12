@@ -8,9 +8,9 @@ import tech.snaco.split_world.utils.splitWorldConfig
 class XpModListener : Listener {
   @EventHandler
   fun onDeath(event: PlayerDeathEvent) {
-    if (splitWorldConfig().xpModEnabled) {
+    if (splitWorldConfig().xpModEnabled()) {
       event.droppedExp =
-        event.player.totalExperience - (event.player.totalExperience * (splitWorldConfig().xpLossPercentage / 100)).toInt()
+        event.player.totalExperience - (event.player.totalExperience * (splitWorldConfig().xpLossPercentage() / 100)).toInt()
     }
   }
 }

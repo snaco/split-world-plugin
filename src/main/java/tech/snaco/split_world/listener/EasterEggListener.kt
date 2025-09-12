@@ -20,7 +20,7 @@ import tech.snaco.split_world.utils.splitWorldConfig
 
 class EasterEggListener(plugin: Plugin) : Listener {
   private val playersSleepingInNether = HashSet<Player>()
-  private val enabled = splitWorldConfig().easterEggsEnabled
+  private val enabled = splitWorldConfig().easterEggsEnabled()
 
   init {
     if (enabled) {
@@ -67,7 +67,7 @@ class EasterEggListener(plugin: Plugin) : Listener {
 
   @EventHandler
   fun enterDeepSleep(event: PlayerDeepSleepEvent) {
-    if (splitWorldConfig().easterEggsEnabled) {
+    if (splitWorldConfig().easterEggsEnabled()) {
       if (event.player.world.name.endsWith("_nether")) {
         playersSleepingInNether.add(event.player)
         event.isCancelled = true
@@ -77,7 +77,7 @@ class EasterEggListener(plugin: Plugin) : Listener {
 
   @EventHandler
   fun leaveBed(event: PlayerBedLeaveEvent) {
-    if (splitWorldConfig().easterEggsEnabled) {
+    if (splitWorldConfig().easterEggsEnabled()) {
       if (event.player.world.name.endsWith("_nether")) {
         playersSleepingInNether.remove(event.player)
       }

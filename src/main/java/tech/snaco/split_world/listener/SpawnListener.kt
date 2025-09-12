@@ -12,7 +12,7 @@ class SpawnListener : Listener {
 
   @EventHandler
   fun onPlayerJoin(event: PlayerJoinEvent) {
-    if (splitWorldConfig().disableWelcomeMessage) {
+    if (splitWorldConfig().disableWelcomeMessage()) {
       return
     }
     val noWelcome = event.player.getPdcInt(splitWorldConfig().keys.noWelcome)
@@ -23,8 +23,8 @@ class SpawnListener : Listener {
           """
                 Hello ${event.player.name}! 
                 This is a split world! That means half of the world is creative, and half is survival.
-                There is a border at ${worldConfig.borderAxis}=${worldConfig.borderLocation}.
-                Creative is on the ${worldConfig.creativeSide} side of the border.
+                There is a border at ${worldConfig.borderAxis()}=${worldConfig.borderLocation()}.
+                Creative is on the ${worldConfig.creativeSide()} side of the border.
                 You now have two inventories, one for each side of the border, which will be saved and restored automatically when you cross.
                 Have fun! (You can disable this message from showing using /understood) 
             """.trimIndent()
@@ -35,17 +35,21 @@ class SpawnListener : Listener {
 
   @EventHandler
   fun onPlayerRespawn(event: PlayerRespawnEvent) {
-    if (splitWorldConfig().customRespawn && !event.isAnchorSpawn && !event.isBedSpawn) {
-      event.respawnLocation = splitWorldConfig().respawnLocation
+    if (splitWorldConfig().customRespawn() && !event.isAnchorSpawn && !event.isBedSpawn) {
+      event.respawnLocation = splitWorldConfig().respawnLocation()
     }
   }
 
   @EventHandler
   fun onSpawn(event: PlayerSpawnLocationEvent) {
-    if (splitWorldConfig().customRespawn && event.player.getPdcInt(splitWorldConfig().keys.firstJoin) != 1) {
+    event.player.switchGameMode(
+      event.player.world
+        .splitConfig()
+        .defaultGameMode()
+    )
+    if (splitWorldConfig().customRespawn() && event.player.getPdcInt(splitWorldConfig().keys.firstJoin) != 1) {
       event.player.setPdcInt(splitWorldConfig().keys.firstJoin, 1)
-      event.spawnLocation = splitWorldConfig().respawnLocation
+      event.spawnLocation = splitWorldConfig().respawnLocation()
     }
-    event.player.switchToConfiguredGameMode()
   }
 }
