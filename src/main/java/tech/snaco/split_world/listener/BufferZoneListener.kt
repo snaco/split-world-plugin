@@ -9,6 +9,7 @@ import org.bukkit.event.Listener
 import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.event.block.BlockEvent
 import org.bukkit.event.block.BlockPlaceEvent
+import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityRegainHealthEvent
 import org.bukkit.event.entity.FoodLevelChangeEvent
 import org.bukkit.event.entity.PlayerDeathEvent
@@ -73,6 +74,13 @@ class BufferZoneListener : Listener {
 
   @EventHandler
   fun playerHunger(event: FoodLevelChangeEvent) {
+    if (event.entity.world.isSplit() && event.entity is Player && event.entity.location.inBufferZone()) {
+      event.isCancelled = true
+    }
+  }
+
+  @EventHandler
+  fun playerDamage(event: EntityDamageByEntityEvent) {
     if (event.entity.world.isSplit() && event.entity is Player && event.entity.location.inBufferZone()) {
       event.isCancelled = true
     }
