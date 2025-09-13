@@ -1,6 +1,7 @@
 package tech.snaco.split_world
 
 import org.bukkit.Bukkit
+import org.bukkit.NamespacedKey
 import org.bukkit.command.Command
 import org.bukkit.command.CommandSender
 import org.bukkit.event.EventHandler
@@ -54,5 +55,9 @@ class SplitWorldPlugin : JavaPlugin(), Listener {
   @EventHandler
   fun preProcessCommand(event: PlayerCommandPreprocessEvent) {
     commandHandler.preProcessCommand(event)
+  }
+
+  fun pdcKey(name: String): NamespacedKey {
+    return NamespacedKey(this, name)
   }
 }

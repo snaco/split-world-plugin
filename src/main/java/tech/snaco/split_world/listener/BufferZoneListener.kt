@@ -1,5 +1,7 @@
 package tech.snaco.split_world.listener
 
+import io.papermc.paper.event.packet.PlayerChunkLoadEvent
+import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.event.Cancellable
 import org.bukkit.event.EventHandler
@@ -32,11 +34,28 @@ class BufferZoneListener : Listener {
   }
 
   @EventHandler
+  fun onChunkLoad(event: PlayerChunkLoadEvent) {
+    if (event.world.isSplit()) {
+      for (y in event.world.minHeight..<event.world.maxHeight) {
+        for (x in 0..15) {
+          for (z in 0..15) {
+            val block = event.chunk.getBlock(x, y, z)
+            if (block.type.isAir || block.type == Material.LAVA || block.type == Material.WATER || block.type == Material.SNOW) {
+              continue
+            }
+            if (block.location.addAcrossSplitAxis(1.0).inBufferZone()) {
+              block.type = Material.BLACK_CONCRETE
+            }
+          }
+        }
+      }
+    }
+  }
+
+  @EventHandler
   fun onPlayerMove(event: PlayerMoveEvent) {
     if (event.player.world.isSplit() && !event.player.splitDisabled()) {
-      event.player.convertBufferZoneBlocks()
       if (event.player.location.inBufferZone()) {
-        event.player.inventory.clear()
         if (!event.to.isTraversable()) {
           event.isCancelled = true
         }
@@ -46,7 +65,7 @@ class BufferZoneListener : Listener {
 
   @EventHandler
   fun onPickup(event: PlayerAttemptPickupItemEvent) {
-    if (event.player.world.isSplit() && event.player.location.inBufferZone()) {
+    if (event.player.location.onDifferentSide(event.item.location) || event.player.location.inBufferZone()) {
       event.isCancelled = true
     }
   }

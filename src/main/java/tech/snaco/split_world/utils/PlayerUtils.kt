@@ -5,6 +5,7 @@ import org.bukkit.block.BlockFace
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataType
+import org.bukkit.potion.PotionEffect
 import org.bukkit.util.Vector
 import tech.snaco.split_world.SplitWorldPlugin
 import tech.snaco.split_world.types.ItemStackArrayDataType
@@ -20,25 +21,57 @@ fun Player.splitDisabled(): Boolean {
   return getPdcInt(splitWorldConfig().keys.splitWorldDisabled) == 1
 }
 
-fun Player.getInventoryKey(): NamespacedKey {
+fun Player.getInventoryKey(gameMode: GameMode): NamespacedKey {
   return NamespacedKey(getPlugin(), name + "_" + gameMode.name.lowercase() + "_inv")
 }
 
-fun Player.getEnderChestKey(): NamespacedKey {
+fun Player.getInventoryKey(): NamespacedKey {
+  return getInventoryKey(gameMode)
+}
+
+fun Player.getEnderChestKey(gameMode: GameMode): NamespacedKey {
   return NamespacedKey(getPlugin(), name + "_" + gameMode.name.lowercase() + "_ender_chest")
 }
 
+fun Player.getEnderChestKey(): NamespacedKey {
+  return getEnderChestKey(gameMode)
+}
+
 fun Player.getEffectsKey(): NamespacedKey {
+  return getEffectsKey(gameMode)
+}
+
+fun Player.getEffectsKey(gameMode: GameMode): NamespacedKey {
   return NamespacedKey(getPlugin(), name + "_" + gameMode.name.lowercase() + "_eff")
 }
 
-fun Player.setPdcInt(key: NamespacedKey, value: Int) {
-  persistentDataContainer.set(key, PersistentDataType.INTEGER, value)
-}
+//#region PDC
+
+fun Player.setPdcInt(name: String, value: Int) = setPdcInt(getPlugin().pdcKey(name), value)
+
+fun Player.setPdcInt(key: NamespacedKey, value: Int) = persistentDataContainer.set(
+  key, PersistentDataType.INTEGER, value
+)
+
+fun Player.setPdcBoolean(name: String, value: Boolean) = persistentDataContainer.set(
+  getPlugin().pdcKey(name), PersistentDataType.BOOLEAN, value
+)
+
+fun Player.getPdcBoolean(name: String): Boolean? =
+  persistentDataContainer.get(getPlugin().pdcKey(name), PersistentDataType.BOOLEAN)
+
+fun Player.getPdcBoolean(name: String, default: Boolean): Boolean = getPdcBoolean(name) ?: default
+
+fun Player.getPdcInt(name: String): Int? =
+  persistentDataContainer.get(getPlugin().pdcKey(name), PersistentDataType.INTEGER)
+
+fun Player.getPdcInt(name: String, default: Int): Int = getPdcInt(name) ?: default
 
 fun Player.getPdcInt(key: NamespacedKey): Int? {
   return persistentDataContainer.get(key, PersistentDataType.INTEGER)
 }
+
+//#endregion
 
 fun Player.saveInventory() {
   // save inventory contents
@@ -54,6 +87,40 @@ fun Player.saveInventory() {
     getEnderChestKey(), ItemStackArrayDataType(), enderChest.contents as Array<ItemStack>
   )
 }
+
+
+fun Player.peekAtInventory(gameMode: GameMode): Array<ItemStack> =
+  persistentDataContainer.get(getInventoryKey(gameMode), ItemStackArrayDataType()) ?: listOf<ItemStack>().toTypedArray()
+
+fun Player.peekAtEnderChest(gameMode: GameMode): Array<ItemStack> =
+  persistentDataContainer.get(getEnderChestKey(gameMode), ItemStackArrayDataType())
+    ?: listOf<ItemStack>().toTypedArray()
+
+fun Player.peekAtEffects(gameMode: GameMode): Array<PotionEffect> =
+  persistentDataContainer.get(getEffectsKey(gameMode), PotionEffectArrayDataType())
+    ?: listOf<PotionEffect>().toTypedArray()
+
+fun Player.stashMyInventory(gameMode: GameMode) =
+  persistentDataContainer.set(
+    getInventoryKey(gameMode),
+    ItemStackArrayDataType(),
+    inventory.contents
+      .filterNotNull()
+      .toTypedArray()
+  )
+
+fun Player.stashMyEnderChest(gameMode: GameMode) =
+  persistentDataContainer.set(
+    getEnderChestKey(gameMode),
+    ItemStackArrayDataType(),
+    enderChest.contents
+      .filterNotNull()
+      .toTypedArray()
+  )
+
+fun Player.stashMyPotionEffects(gameMode: GameMode) =
+  persistentDataContainer.set(getEffectsKey(gameMode), PotionEffectArrayDataType(), activePotionEffects.toTypedArray())
+
 
 fun Player.loadInventory() {
   // load inventory contents
@@ -80,7 +147,7 @@ fun Player.loadInventory() {
   }
 }
 
-fun Player.getFacingVector(): Vector {
+fun Player.facingVector(): Vector {
   val y = 1.5
   // south -Z
   // north +Z
@@ -109,31 +176,65 @@ fun Player.getFacingVector(): Vector {
   }
 }
 
-fun Player.switchGameMode(gameMode: GameMode) {
-  if (this.gameMode != gameMode) {
-    val shouldPlaySound = getPdcInt(splitWorldConfig().keys.playBorderSound)
-    if (shouldPlaySound == null || shouldPlaySound == 1) {
-      playSound(location, Sound.BLOCK_NOTE_BLOCK_BELL, 1.0f, 1.0f)
+fun Player.seeThatSparkle() =
+  I.spawnParticle(
+    Particle.DRAGON_BREATH,
+    location
+      .clone()
+      .add(facingVector()),
+    20
+  )
+
+fun Player.hearThatDing() =
+  I.playSound(at.my.location, Sound.BLOCK_NOTE_BLOCK_BELL, 1.0f, 1.0f)
+
+fun Player.switchGameMode(toTheOneItShouldBe: GameMode) {
+  if (my.gameMode != toTheOneItShouldBe) {
+    and_if (I.shouldHearTheDing) { ->
+      then.I.hearThatDing()
     }
-    val facingVector = getFacingVector()
-    world.spawnParticle(
-      Particle.DRAGON_BREATH,
-      location
-        .clone()
-        .add(facingVector),
-      20
-    )
-    saveInventory()
+    and_if (I.also.shouldSeeTheSparkle) { ->
+      then.I.seeThatSparkle()
+    }
+    also
+    if (I.shouldSeeTheSparkle) {
+      then.I.seeThatSparkle()
+    }
+    then.I.stashMyInventory(_for.my.gameMode)
+    I.also.stashMyPotionEffects(_for.my.gameMode)
+    and.I.stashMyEnderChest(_for.my.gameMode).too
+    after.that
+    I.set.my.gameMode = toTheOneItShouldBe
     inventory.clear()
-    this.gameMode = gameMode
-    loadInventory()
+    enderChest.clear()
+    activePotionEffects.clear()
+    and.set.my.inventory.contents = peekAtInventory(toTheOneItShouldBe)
+    and.set.my.enderChest.contents = peekAtEnderChest(toTheOneItShouldBe)
+    activePotionEffects.addAll(peekAtEffects(toTheOneItShouldBe))
   }
 }
 
+private val Unit.too: Any get() = this
+val Player.set: Player get() = this
+val Player.after: Player get() = this
+val Player.that: Player get() = this
+val Player.my: Player get() = this
+val Player.I: Player get() = this
+val Player.and: Player get() = this
+fun Player.and_if(condition: Boolean, op: () -> Any?) = if (condition) op() else {}
+val Player.then: Player get() = this
+val Player.at: Player get() = this
+val Player.also: Player get() = this
+val Player._for: Player get() = this
+val Player.finally: Player get() = this
+val Player.now: Player get() = this
+val Player.but: Player get() = this
+
+
 fun Player.switchToConfiguredGameMode() {
-  if (!this.world.isSplit()) {
+  if (!my.world.isSplit()) {
     switchGameMode(
-      world
+      my.world
         .splitConfig()
         .defaultGameMode()
     )
@@ -156,50 +257,6 @@ fun Player.switchToConfiguredGameMode() {
     // survival side
   } else {
     switchGameMode(GameMode.SURVIVAL)
-  }
-}
-
-fun Player.convertBufferZoneBlocks() {
-  val playerLocation = location.clone()
-  val start = world
-    .splitConfig()
-    .borderLocation() - world
-    .splitConfig()
-    .borderWidth()
-  val end = world
-    .splitConfig()
-    .borderLocation() + world
-    .splitConfig()
-    .borderWidth()
-  for (i in start until end) {
-    for (j in -5..4) {
-      // Use world's height range instead of hardcoded values
-      val minY = world.minHeight
-      val maxYExclusive = world.maxHeight
-      for (y in minY until maxYExclusive) {
-        val loc = playerLocation.clone()
-        loc.y = y.toDouble()
-        if (world
-            .splitConfig()
-            .borderAxis() == "X"
-        ) {
-          loc.x = i.toDouble()
-          loc.z += j
-        } else {
-          loc.z = i.toDouble()
-          loc.x += j
-        }
-        val block = world.getBlockAt(loc)
-        val blockType = block.type
-
-        // Avoid Kotlin enum when-switch mapping to prevent NPE
-        if (blockType.isAir || blockType == Material.LAVA || blockType == Material.SNOW) {
-          continue
-        }
-
-        block.type = Material.WHITE_CONCRETE
-      }
-    }
   }
 }
 
@@ -229,3 +286,46 @@ fun Player.warpToGround() {
   destination.yaw = yaw
   teleport(destination)
 }
+
+
+var Player.welcomeMessageDisabled: Boolean
+  get() = getPdcBoolean("no_welcome_message", false)
+  set(value) = setPdcBoolean("no_welcome_message", value)
+
+var Player.splitWorldDisabled: Boolean
+  get() = getPdcBoolean("split_world_disabled", false)
+  set(value) = setPdcBoolean("split_world_disabled", value)
+
+var Player.firstJoin: Boolean
+  get() = getPdcBoolean("first_join", true)
+  set(value) = setPdcBoolean("first_join", value)
+
+var Player.firstFishAttempt: Boolean
+  get() = getPdcBoolean("first_fish_attempt", true)
+  set(value) = setPdcBoolean("first_fish_attempt", value)
+
+var Player.spawnBuilder: Boolean
+  get() = getPdcBoolean("spawn_builder", false)
+  set(value) = setPdcBoolean("spawn_builder", value)
+
+var Player.shouldHearTheDing: Boolean
+  get() = getPdcBoolean("play_border_sound", true)
+  set(value) = setPdcBoolean("play_border_sound", value)
+
+var Player.sleepInNetherScore: Int
+  get() = getPdcInt("sleep_in_nether_score", 0)
+  set(value) = setPdcInt("sleep_in_nether_score", value)
+
+var Player.netherEgg: Int
+  get() = getPdcInt("nether_egg_score", 0)
+  set(value) = setPdcInt("nether_egg_score", value)
+
+var Player.netherSleepThrottle: Int
+  get() = getPdcInt("nether_sleep_throttle", 100)
+  set(value) = setPdcInt("nether_sleep_throttle", value)
+
+var Player.netherSleepTock: Int
+  get() = getPdcInt("nether_sleep_tock", 1)
+  set(value) = setPdcInt("nether_sleep_tock", value)
+
+val Player.shouldSeeTheSparkle: Boolean get() = true

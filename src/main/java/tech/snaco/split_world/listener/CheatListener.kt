@@ -1,32 +1,40 @@
 package tech.snaco.split_world.listener
 
-import org.bukkit.entity.Item
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.block.BlockFromToEvent
 import org.bukkit.event.entity.EntityPortalEvent
-import org.bukkit.event.entity.ItemSpawnEvent
+import org.bukkit.event.player.PlayerDropItemEvent
 import org.bukkit.event.player.PlayerFishEvent
 import org.bukkit.persistence.PersistentDataType
 import org.bukkit.plugin.Plugin
 import org.bukkit.scheduler.BukkitRunnable
+import tech.snaco.split_world.types.DroppedItem
 import tech.snaco.split_world.utils.*
 
 class CheatListener(plugin: Plugin) : Listener {
-  private val droppedItems = ArrayList<Item>()
+  private val droppedItems = ArrayList<DroppedItem>()
 
   init {
     object : BukkitRunnable() {
       override fun run() {
         if (droppedItems.size.toLong() > 0) {
-          val itemsToRemove = ArrayList<Item>()
-          for (item in droppedItems) {
-            if (item.world.isSplit() && item.location.inBufferZone()) {
-              item.remove()
-              itemsToRemove.add(item)
+          val droppedItemsToStopTracking = ArrayList<DroppedItem>()
+          for (droppedItem in droppedItems) {
+            if (droppedItem.item.world.isSplit()
+              && droppedItem.item.location.inBufferZone()
+              && !droppedItem.previousLocation.inBufferZone()
+            ) {
+              droppedItem.item.remove()
+              droppedItem.cheater.sendMessage("Stop that")
+              droppedItem.item.velocity = droppedItem.item.velocity.multiply(-2.0)
+              droppedItem.cheater.inventory.addItem(droppedItem.item.itemStack)
+              droppedItemsToStopTracking.add(droppedItem)
+            } else {
+              droppedItem.previousLocation = droppedItem.item.location
             }
           }
-          droppedItems.removeAll(itemsToRemove.toSet())
+          droppedItems.removeAll(droppedItemsToStopTracking.toSet())
         }
       }
     }.runTaskTimer(plugin, 0, 1L)
@@ -43,11 +51,23 @@ class CheatListener(plugin: Plugin) : Listener {
   }
 
   @EventHandler
-  fun onItemSpawn(event: ItemSpawnEvent) {
-    if (!event.entity.world.isSplit()) {
+  fun onPlayerDrop(event: PlayerDropItemEvent) {
+    if (!event.player.world.isSplit()) {
       return
     }
-    droppedItems.add(event.entity)
+//    if (!event.player.location.onNegativeSideOfBuffer() && !event.player.location.onPositiveSideOfBuffer()) {
+    if (event.player.location.inBufferZone()) {
+      event.isCancelled = true
+      return
+    }
+    droppedItems.add(
+      DroppedItem(
+        event.itemDrop,
+        event.itemDrop.location,
+        event.player.gameMode,
+        cheater = event.player,
+      )
+    )
   }
 
   @EventHandler
@@ -56,7 +76,7 @@ class CheatListener(plugin: Plugin) : Listener {
       event.isCancelled = true
     }
   }
-  
+
   @EventHandler
   fun onPlayerFish(event: PlayerFishEvent) {
     if (!event.player.world.isSplit()) {
@@ -78,5 +98,4 @@ class CheatListener(plugin: Plugin) : Listener {
     }
     event.player.sendMessage("Nice try.")
   }
-
 }

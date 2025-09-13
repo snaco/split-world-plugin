@@ -1,14 +1,12 @@
 package tech.snaco.split_world.listener
 
 import org.bukkit.GameMode
-import org.bukkit.Material
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.player.PlayerChangedWorldEvent
 import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.event.player.PlayerRespawnEvent
 import org.bukkit.event.player.PlayerTeleportEvent
-import org.bukkit.util.Vector
 import tech.snaco.split_world.utils.*
 
 class GameModeListener : Listener {
@@ -44,27 +42,27 @@ class GameModeListener : Listener {
     if (event.player.splitDisabled()) {
       return
     }
+//    if (event.player.world.isSplit()) {
+//      // handle transitioning to survival safely
+//      if (event.player.gameMode != GameMode.SURVIVAL
+//        && event.to.onDefaultSide()
+//        && event.player.location.onDefaultSide()
+//      ) {
+//        // temporarily load survival inv to check equip status
+//        event.player.loadInventory()
+//        val playerHasElytraEquipped = event.player.inventory.chestplate?.type == Material.ELYTRA
+//        event.player.inventory.clear()
+//        event.player.enderChest.contents
+//        if (playerHasElytraEquipped && event.player.location.block.type == Material.AIR) {
+//          event.player.isGliding = true
+//        }
+//        if (!playerHasElytraEquipped && event.player.location.onDefaultSide() && event.player.inAir()) {
+//          event.player.velocity = Vector(0, 0, 0)
+//          event.player.warpToGround()
+//        }
+//      }
+//    }
     event.player.switchToConfiguredGameMode()
-    if (event.player.world.isSplit()) {
-      // handle transitioning to survival safely
-      if (event.player.gameMode != GameMode.SURVIVAL
-        && event.to.onDefaultSide()
-        && event.player.location.onDefaultSide()
-      ) {
-        // temporarily load survival inv to check equip status
-        event.player.loadInventory()
-        val playerHasElytraEquipped = event.player.inventory.chestplate?.type == Material.ELYTRA
-        event.player.inventory.clear()
-        event.player.enderChest.contents
-        if (playerHasElytraEquipped && event.player.location.block.type == Material.AIR) {
-          event.player.isGliding = true
-        }
-        if (!playerHasElytraEquipped && event.player.location.onDefaultSide() && event.player.inAir()) {
-          event.player.velocity = Vector(0, 0, 0)
-          event.player.warpToGround()
-        }
-      }
-    }
   }
 
   @EventHandler

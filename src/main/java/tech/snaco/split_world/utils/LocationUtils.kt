@@ -14,6 +14,13 @@ fun Location.onDefaultSide(): Boolean {
     .creativeSide() == "positive" && this.onNegativeSideOfBuffer()
 }
 
+fun Location.onDifferentSide(otherLocation: Location): Boolean {
+  val acrossDefaultSide = onDefaultSide() && !otherLocation.onDefaultSide()
+  val acrossBufferZone = inBufferZone() && !otherLocation.inBufferZone()
+  val acrossCreativeSide = onCreativeSide() && !otherLocation.onCreativeSide()
+  return acrossCreativeSide || acrossDefaultSide || acrossBufferZone
+}
+
 fun Location.onCreativeSide(): Boolean {
   return if (this.world
       .splitConfig()
@@ -26,10 +33,11 @@ fun Location.onCreativeSide(): Boolean {
 }
 
 fun Location.inBufferZone(): Boolean {
-  val worldConfig = this.world.splitConfig()
-  val pos = this.getRelevantPos()
-  val borderLocation = worldConfig.borderLocation()
-  return (pos >= borderLocation - worldConfig.borderWidth() / 2.0 && pos < borderLocation + worldConfig.borderWidth() / 2.0)
+//  val worldConfig = this.world.splitConfig()
+//  val pos = this.getRelevantPos()
+//  val borderLocation = worldConfig.borderLocation()
+  return !onNegativeSideOfBuffer() && !onPositiveSideOfBuffer()
+//  return (pos > borderLocation - worldConfig.borderWidth() && pos <= borderLocation + worldConfig.borderWidth())
 }
 
 fun Location.getRelevantPos(): Double {
@@ -44,15 +52,23 @@ fun Location.getRelevantPos(): Double {
 }
 
 fun Location.onNegativeSideOfBuffer(): Boolean {
+  return onNegativeSideOfBuffer(0.0)
+}
+
+fun Location.onNegativeSideOfBuffer(extra: Double): Boolean {
   val pos = this.getRelevantPos()
   val worldConfig = this.world.splitConfig()
-  return pos < worldConfig.borderLocation() - worldConfig.borderWidth()
+  return pos <= worldConfig.borderLocation() - worldConfig.borderWidth() - extra
 }
 
 fun Location.onPositiveSideOfBuffer(): Boolean {
+  return onPositiveSideOfBuffer(0.0)
+}
+
+fun Location.onPositiveSideOfBuffer(extra: Double): Boolean {
   val pos = this.getRelevantPos()
   val worldConfig = this.world.splitConfig()
-  return pos >= worldConfig.borderLocation() + worldConfig.borderWidth()
+  return pos > worldConfig.borderLocation() + worldConfig.borderWidth() + extra
 }
 
 fun Location.isTraversable(): Boolean {
