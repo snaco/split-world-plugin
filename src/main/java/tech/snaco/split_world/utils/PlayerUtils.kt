@@ -6,6 +6,7 @@ import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataType
 import org.bukkit.potion.PotionEffect
+import org.bukkit.scheduler.BukkitTask
 import org.bukkit.util.Vector
 import tech.snaco.split_world.SplitWorldPlugin
 import tech.snaco.split_world.types.ItemStackArrayDataType
@@ -15,6 +16,25 @@ private fun getPlugin(): SplitWorldPlugin {
   return Bukkit
     .getPluginManager()
     .getPlugin("SplitWorld") as? SplitWorldPlugin ?: error("SplitWorld plugin not loaded!")
+}
+
+fun Player.preventFirstFallDamage() {
+  val hadAllowFlight = allowFlight
+  // Ensure gliding can be toggled without Elytra
+  allowFlight = true
+  if (!isOnGround) {
+    isGliding = true
+  }
+
+  var taskRef: BukkitTask? = null
+  taskRef = Bukkit.getScheduler().runTaskTimer(getPlugin(), Runnable {
+    // Stop when the player touches ground or becomes invalid
+    if (isOnGround || !isValid || isDead) {
+      isGliding = false
+      allowFlight = hadAllowFlight
+      taskRef?.cancel()
+    }
+  }, 1L, 1L)
 }
 
 fun Player.splitDisabled(): Boolean {
@@ -73,22 +93,6 @@ fun Player.getPdcInt(key: NamespacedKey): Int? {
 
 //#endregion
 
-fun Player.saveInventory() {
-  // save inventory contents
-  @Suppress("UNCHECKED_CAST") persistentDataContainer.set(
-    getInventoryKey(), ItemStackArrayDataType(), inventory.contents as Array<ItemStack>
-  )
-  // save potion effects
-  persistentDataContainer.set(
-    getEffectsKey(), PotionEffectArrayDataType(), activePotionEffects.toTypedArray()
-  )
-  // save ender chest contents
-  @Suppress("UNCHECKED_CAST") persistentDataContainer.set(
-    getEnderChestKey(), ItemStackArrayDataType(), enderChest.contents as Array<ItemStack>
-  )
-}
-
-
 fun Player.peekAtInventory(gameMode: GameMode): Array<ItemStack> =
   persistentDataContainer.get(getInventoryKey(gameMode), ItemStackArrayDataType()) ?: listOf<ItemStack>().toTypedArray()
 
@@ -100,52 +104,24 @@ fun Player.peekAtEffects(gameMode: GameMode): Array<PotionEffect> =
   persistentDataContainer.get(getEffectsKey(gameMode), PotionEffectArrayDataType())
     ?: listOf<PotionEffect>().toTypedArray()
 
+@Suppress("UNCHECKED_CAST")
 fun Player.stashMyInventory(gameMode: GameMode) =
   persistentDataContainer.set(
     getInventoryKey(gameMode),
     ItemStackArrayDataType(),
-    inventory.contents
-      .filterNotNull()
-      .toTypedArray()
+    inventory.contents as Array<ItemStack>
   )
 
+@Suppress("UNCHECKED_CAST")
 fun Player.stashMyEnderChest(gameMode: GameMode) =
   persistentDataContainer.set(
     getEnderChestKey(gameMode),
     ItemStackArrayDataType(),
-    enderChest.contents
-      .filterNotNull()
-      .toTypedArray()
+    enderChest.contents as Array<ItemStack>
   )
 
 fun Player.stashMyPotionEffects(gameMode: GameMode) =
   persistentDataContainer.set(getEffectsKey(gameMode), PotionEffectArrayDataType(), activePotionEffects.toTypedArray())
-
-
-fun Player.loadInventory() {
-  // load inventory contents
-  val inventoryContents = persistentDataContainer.get(getInventoryKey(), ItemStackArrayDataType())
-  if (inventoryContents != null) {
-    inventory.contents = inventoryContents
-  }
-
-  // load potion effects
-  val effects = persistentDataContainer.get(getEffectsKey(), PotionEffectArrayDataType())
-  if (effects != null) {
-    for (effect in activePotionEffects) {
-      removePotionEffect(effect.type)
-    }
-    for (effect in effects) {
-      addPotionEffect(effect)
-    }
-  }
-
-  //load ender chest contents
-  val enderChestContents = persistentDataContainer.get(getEnderChestKey(), ItemStackArrayDataType())
-  if (enderChestContents != null) {
-    enderChest.contents = enderChestContents
-  }
-}
 
 fun Player.facingVector(): Vector {
   val y = 1.5
@@ -193,12 +169,8 @@ fun Player.switchGameMode(toTheOneItShouldBe: GameMode) {
     and_if(I.shouldHearTheDing) { ->
       then.I.hearThatDing()
     }
-    and_if(I.also.shouldSeeTheSparkle) { ->
-      then.I.seeThatSparkle()
-    }
-    also
-    if (I.shouldSeeTheSparkle) {
-      then.I.seeThatSparkle()
+    also(I.shouldAlwaysSeeTheSparkle) { ->
+      so.I.seeThatSparkle()
     }
     then.I.stashMyInventory(_for.my.gameMode)
     I.also.stashMyPotionEffects(_for.my.gameMode)
@@ -207,21 +179,33 @@ fun Player.switchGameMode(toTheOneItShouldBe: GameMode) {
     I.set.my.gameMode = toTheOneItShouldBe
     inventory.clear()
     enderChest.clear()
-    activePotionEffects.clear()
-    and.set.my.inventory.contents = peekAtInventory(toTheOneItShouldBe)
+    I.clearActivePotionEffects()
+    and.I.set.my.inventory.contents = peekAtInventory(toTheOneItShouldBe)
     and.set.my.enderChest.contents = peekAtEnderChest(toTheOneItShouldBe)
+    addPotionEffects(peekAtEffects(my.gameMode).toList())
     activePotionEffects.addAll(peekAtEffects(toTheOneItShouldBe))
+    if (I.am.inAir()) {
+      preventFirstFallDamage()
+    }
   }
 }
+
+val Player.hasElytraEquipped: Boolean get() = inventory.chestplate != null && inventory.chestplate!!.type == Material.ELYTRA
+val Player.haveAnElytraEquipped: Boolean get() = inventory.chestplate != null && inventory.chestplate!!.type == Material.ELYTRA
 
 private val Unit.too: Any get() = this
 val Player.set: Player get() = this
 val Player.after: Player get() = this
+val Player.am: Player get() = this
 val Player.that: Player get() = this
 val Player.my: Player get() = this
+val Player.me: Player get() = this
 val Player.I: Player get() = this
+val Player.so: Player get() = this
 val Player.and: Player get() = this
 fun Player.and_if(condition: Boolean, op: () -> Any?) = if (condition) op() else {
+}
+fun Player.also(condition: Boolean, op: () -> Any?) = if (condition) op() else {
 }
 
 val Player.then: Player get() = this
@@ -338,4 +322,4 @@ var Player.netherSleepTock: Int
   get() = getPdcInt("nether_sleep_tock", 1)
   set(value) = setPdcInt("nether_sleep_tock", value)
 
-val Player.shouldSeeTheSparkle: Boolean get() = true
+val Player.shouldAlwaysSeeTheSparkle: Boolean get() = true
