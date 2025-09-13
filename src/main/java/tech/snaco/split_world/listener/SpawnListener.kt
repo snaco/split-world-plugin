@@ -17,9 +17,9 @@ class SpawnListener : Listener {
     if (splitWorldConfig().disableWelcomeMessage()) {
       return
     }
-    val noWelcome = event.player.getPdcInt(splitWorldConfig().keys.noWelcome)
+
     val worldConfig = event.player.world.splitConfig()
-    if (noWelcome == null) {
+    if (!event.player.welcomeMessageDisabled) {
       event.player.sendMessage(
         Component.text(
           """
@@ -68,8 +68,8 @@ class SpawnListener : Listener {
         .splitConfig()
         .defaultGameMode()
     )
-    if (splitWorldConfig().customRespawn() && event.player.getPdcInt(splitWorldConfig().keys.firstJoin) != 1) {
-      event.player.setPdcInt(splitWorldConfig().keys.firstJoin, 1)
+    if (splitWorldConfig().customRespawn() && event.player.firstJoin) {
+      event.player.firstJoin = false
       event.spawnLocation = splitWorldConfig().respawnLocation()
     }
   }

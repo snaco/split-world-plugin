@@ -15,7 +15,7 @@ import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.plugin.Plugin
 import org.bukkit.scheduler.BukkitRunnable
 import tech.snaco.split_world.extras.easter_eggs.Messages
-import tech.snaco.split_world.utils.getPdcInt
+import tech.snaco.split_world.utils.netherEgg
 import tech.snaco.split_world.utils.splitWorldConfig
 
 class EasterEggListener(plugin: Plugin) : Listener {
@@ -26,7 +26,7 @@ class EasterEggListener(plugin: Plugin) : Listener {
     if (enabled) {
       object : BukkitRunnable() {
         override fun run() {
-          Messages.runNetherSleepTask(playersSleepingInNether, splitWorldConfig().keys)
+          Messages.runNetherSleepTask(playersSleepingInNether)
         }
       }.runTaskTimer(plugin, 20L, 1L)
     }
@@ -54,8 +54,7 @@ class EasterEggListener(plugin: Plugin) : Listener {
   @EventHandler
   fun enterBed(event: PlayerBedEnterEvent) {
     if (enabled) {
-      val netherEggComplete = event.player.getPdcInt(splitWorldConfig().keys.netherEgg)
-      if (netherEggComplete != null && netherEggComplete >= 1561) {
+      if (event.player.netherEgg >= 1561) {
         return
       }
       if (event.bedEnterResult == BedEnterResult.NOT_POSSIBLE_HERE) {

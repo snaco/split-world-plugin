@@ -39,7 +39,7 @@ class GameModeListener : Listener {
 
   @EventHandler
   fun onPlayerMove(event: PlayerMoveEvent) {
-    if (event.player.splitDisabled()) {
+    if (event.player.splitWorldDisabled) {
       return
     }
     event.player.switchToConfiguredGameMode()

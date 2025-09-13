@@ -53,7 +53,7 @@ class BufferZoneListener : Listener {
   @EventHandler
   fun onPlayerMove(event: PlayerMoveEvent) {
     print(event.player.location.getRelevantPos())
-    if (event.player.world.isSplit() && !event.player.splitDisabled()) {
+    if (event.player.world.isSplit() && !event.player.splitWorldDisabled) {
       if (event.player.location.inBufferZone()) {
         if (!event.to.isTraversable()) {
           event.isCancelled = true

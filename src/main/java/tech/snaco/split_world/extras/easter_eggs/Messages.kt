@@ -2,70 +2,52 @@ package tech.snaco.split_world.extras.easter_eggs
 
 import net.kyori.adventure.text.format.TextColor
 import org.bukkit.entity.Player
-import tech.snaco.split_world.SplitWorldKeys
-import tech.snaco.split_world.utils.getPdcInt
-import tech.snaco.split_world.utils.setPdcInt
+import tech.snaco.split_world.utils.netherEgg
+import tech.snaco.split_world.utils.netherSleepThrottle
+import tech.snaco.split_world.utils.netherSleepTock
+import tech.snaco.split_world.utils.sleepInNetherScore
 import java.util.*
 import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
 object Messages {
-  fun runNetherSleepTask(playersSleepingInNether: Set<Player>, keys: SplitWorldKeys) {
+  fun runNetherSleepTask(playersSleepingInNether: Set<Player>) {
     for (player in playersSleepingInNether) {
-      var throttle = player.getPdcInt(keys.netherSleepThrottle)
-      var tock = player.getPdcInt(keys.netherSleepTock)
-      if (throttle == null) {
-        throttle = 100
-        player.setPdcInt(keys.netherSleepThrottle, throttle)
-      }
-      if (tock == null) {
-        tock = 1
-      }
-      if (tock % throttle != 0) {
-        player.setPdcInt(keys.netherSleepTock, ++tock)
+      if (player.netherSleepTock % player.netherSleepThrottle != 0) {
+        ++player.netherSleepTock
       } else {
-        tock = 1
-        player.setPdcInt(keys.netherSleepTock, tock)
-
-        var sleepScore = player.getPdcInt(keys.sleepInNetherScore)
-        if (sleepScore == null) {
-          sleepScore = 0
-        }
+        player.netherSleepTock = 1
+        var sleepScore = player.sleepInNetherScore
         if (sleepScore < nether_sleep_messages.size) {
           player.sendMessage(
             TextColor
               .color(255, 0, 0)
               .toString() + decrypt(nether_sleep_messages[sleepScore])
           )
-          player.setPdcInt(keys.sleepInNetherScore, ++sleepScore)
+          ++player.sleepInNetherScore
         } else {
-          if (throttle == 100) {
-            throttle = 1
-            player.setPdcInt(keys.netherSleepThrottle, throttle)
+          if (player.netherSleepThrottle == 100) {
+            player.netherSleepThrottle = 1
           }
-          var beeScore = player.getPdcInt(keys.netherEgg)
-          if (beeScore == null) {
-            beeScore = 0
-          }
-          if (beeScore < nether_sleep_egg.size) {
+          if (player.netherEgg < nether_sleep_egg.size) {
             player.sendMessage(
               TextColor
                 .color(255, 255, 0)
-                .toString() + decrypt(nether_sleep_egg[beeScore])
+                .toString() + decrypt(nether_sleep_egg[player.netherEgg])
             )
-            player.setPdcInt(keys.netherEgg, ++beeScore)
-          } else if (beeScore == nether_sleep_egg.size) {
+            ++player.netherEgg
+          } else if (player.netherEgg == nether_sleep_egg.size) {
             player.sendMessage(decrypt(AFTER_NETHER_EGG))
             player.giveExp(69420)
-            player.setPdcInt(keys.netherEgg, ++beeScore)
+            ++player.netherEgg
           }
         }
       }
     }
   }
 
-  private val nether_sleep_messages = listOf<String>(
+  private val nether_sleep_messages = listOf(
     "dCVq7FwCSaC1nscQgSTv3a0vJmEPGCnvf+2U/R93RGew9A2TjkHKgsl1NOAkS7853LWqD3r1w6UAS8/Wi2saUACscBjWqzP4aQJonKseABuGDSsZUt8fkmsm1xSqZpVp",
     "WJhWa4BJl0RpZQmhgQO9V2ZtmP5MG4+QmHSlFMt98iVv0zFxzC15E6C9oS5DqM1JOeldAHjQYoFCbM+rIV86FA0ADdK/40iho/ymZd9BbUo=",
     "Y0vAUOSOfw/qkGaFkxjkWTGVXW8AlPz9fYud10o+49paYaWf6q6zjNFD906/n9ZrA+DraFfLOfQwscgrPs+rsA==",
@@ -78,7 +60,7 @@ object Messages {
   )
   private const val AFTER_NETHER_EGG =
     "pZEMkQjeKLX/DXTnEh0COAHbceVvHShpT3DQwL0QHZFFy20ip9bIpASz9wOHKbFe4g1ZxM3XMES1Lf0YNQ0WgIfPRdznMAHZCf6GFAiTY1wBCZEg9GQSi5Lu+4SgaC2CMNa8kwysMzvLg1furshPt0i/aZU1Pv1sR0zvUNlneSQ="
-  private val nether_sleep_egg = listOf<String>(
+  private val nether_sleep_egg = listOf(
     "XlCs6OnM8aeFWr2eHjmClL4pC7fwArMYzVBXNJcUNW/IPye6qcqBOzjr8Pv82MM2xWdAVQt+A7f8dIzVa0nDVm+BeklndSBe6J7d35PHvl+mxNBhc68KGilXoBcDTfqM",
     "ku3cA3GDp3Q7+AT7biSGg24lc98qrTKixJ1MwQwM5OZtDezQwLfeenc4vSfvYqYULoTTbCZpIgIcKSKakXS6rAUhuR+i/yD/nsi/Pc/LhhM=",
     "hqSpqUf6sx5uCL+CBlpz20eaPDWvsYSc2oTIcjDeMgnyDD3Q+E1dizz6Hec51cot3fJtNo0HBhUapGDb9kHLyFWPvc3AJxdOmvlnPyo6UWnSIzRBitvm6V8rglSAk5p5",

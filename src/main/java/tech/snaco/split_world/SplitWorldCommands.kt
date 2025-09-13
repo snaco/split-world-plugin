@@ -6,10 +6,7 @@ import org.bukkit.command.Command
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import org.bukkit.event.player.PlayerCommandPreprocessEvent
-import org.bukkit.persistence.PersistentDataType
-import tech.snaco.split_world.utils.onCreativeSide
-import tech.snaco.split_world.utils.splitWorldConfig
-import tech.snaco.split_world.utils.switchToConfiguredGameMode
+import tech.snaco.split_world.utils.*
 
 class SplitWorldCommands() {
 
@@ -80,9 +77,9 @@ class SplitWorldCommands() {
         return false
       }
       if (args[0].equals("true", ignoreCase = true)) {
-        playerPdc.set(splitWorldConfig().keys.playBorderSound, PersistentDataType.INTEGER, 1)
+        player.shouldHearTheDing = true
       } else if (args[0].equals("false", ignoreCase = true)) {
-        playerPdc.set(splitWorldConfig().keys.playBorderSound, PersistentDataType.INTEGER, 0)
+        player.shouldHearTheDing = false
       } else {
         return false
       }
@@ -96,13 +93,12 @@ class SplitWorldCommands() {
         return false
       }
       val targetPlayer = server.getPlayer(args[0]) ?: return false
-      val targetPlayerPdc = targetPlayer.persistentDataContainer
       if (args[1].equals("true", ignoreCase = true)) {
-        targetPlayerPdc.set(splitWorldConfig().keys.spawnBuilder, PersistentDataType.INTEGER, 1)
+        player.spawnBuilder = true
         println(targetPlayer.name + "is now a spawn builder.")
         targetPlayer.sendMessage("You now have permission to build in the spawn area.")
       } else if (args[1].equals("false", ignoreCase = true)) {
-        targetPlayerPdc.set(splitWorldConfig().keys.spawnBuilder, PersistentDataType.INTEGER, 0)
+        player.spawnBuilder = false
         println(targetPlayer.name + "is no longer a spawn builder.")
         targetPlayer.sendMessage("You no longer have permission to build in the spawn area.")
       } else {
@@ -113,21 +109,21 @@ class SplitWorldCommands() {
 
     //dismiss welcome_message permanently
     if (command.name.equals("understood", ignoreCase = true)) {
-      playerPdc.set(splitWorldConfig().keys.noWelcome, PersistentDataType.INTEGER, 1)
+      player.welcomeMessageDisabled = true
       player.sendMessage("You will no longer see the welcome message for split world.")
       return true
     }
 
     if (command.name.equals("disable-split-world", ignoreCase = true)) {
       if (player.hasPermission("split-world.disable-split-world")) {
-        playerPdc.set(splitWorldConfig().keys.splitWorldDisabled, PersistentDataType.INTEGER, 1)
+        player.splitWorldDisabled = true
       }
       return true
     }
 
     if (command.name.equals("enable-split-world", ignoreCase = true)) {
       if (player.hasPermission("split-world.enable-split-world")) {
-        playerPdc.set(splitWorldConfig().keys.splitWorldDisabled, PersistentDataType.INTEGER, 0)
+        player.splitWorldDisabled = false
       }
       player.switchToConfiguredGameMode()
       return true

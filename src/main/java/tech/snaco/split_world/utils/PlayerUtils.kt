@@ -37,10 +37,6 @@ fun Player.preventFirstFallDamage() {
   }, 1L, 1L)
 }
 
-fun Player.splitDisabled(): Boolean {
-  return getPdcInt(splitWorldConfig().keys.splitWorldDisabled) == 1
-}
-
 fun Player.getInventoryKey(gameMode: GameMode): NamespacedKey {
   return NamespacedKey(getPlugin(), name + "_" + gameMode.name.lowercase() + "_inv")
 }

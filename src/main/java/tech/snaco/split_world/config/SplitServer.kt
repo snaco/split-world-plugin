@@ -4,7 +4,6 @@ import org.bukkit.Bukkit
 import org.bukkit.GameMode
 import org.bukkit.Location
 import org.bukkit.World
-import tech.snaco.split_world.SplitWorldKeys
 import tech.snaco.split_world.SplitWorldPlugin
 
 /** Root config loaded from config.yml in a type-safe way. */
@@ -52,8 +51,6 @@ class SplitServer(val plugin: SplitWorldPlugin) {
         ?.let { world -> world to cfg }
     }
     .toMap()
-
-  val keys = SplitWorldKeys(plugin)
 
   init {
     plugin.saveDefaultConfig()

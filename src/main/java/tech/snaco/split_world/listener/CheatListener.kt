@@ -3,12 +3,13 @@ package tech.snaco.split_world.listener
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.block.BlockFromToEvent
+import org.bukkit.event.block.BlockPistonExtendEvent
+import org.bukkit.event.block.BlockPistonRetractEvent
 import org.bukkit.event.entity.EntityPortalEvent
 import org.bukkit.event.inventory.InventoryOpenEvent
 import org.bukkit.event.player.PlayerDropItemEvent
 import org.bukkit.event.player.PlayerFishEvent
 import org.bukkit.event.player.PlayerInteractEvent
-import org.bukkit.persistence.PersistentDataType
 import org.bukkit.plugin.Plugin
 import org.bukkit.scheduler.BukkitRunnable
 import tech.snaco.split_world.types.DroppedItem
@@ -36,6 +37,43 @@ class CheatListener(plugin: Plugin) : Listener {
         }
       }
     }.runTaskTimer(plugin, 0, 1L)
+  }
+
+  @EventHandler
+  fun onPistonExtend(event: BlockPistonExtendEvent) {
+    if (!event.block.world.isSplit()) {
+      return
+    }
+
+    val dir = event.direction
+    for (moved in event.blocks) {
+      val fromLoc = moved.location
+      val toLoc = moved.getRelative(dir).location
+
+      if (toLoc.inBufferZone() || toLoc.onDifferentSide(fromLoc)) {
+        event.isCancelled = true
+        return
+      }
+    }
+  }
+
+  @EventHandler
+  fun onPistonRetract(event: BlockPistonRetractEvent) {
+    if (!event.block.world.isSplit()) {
+      return
+    }
+
+    // During retraction, blocks move toward the piston (opposite of the facing)
+    val dir = event.direction.oppositeFace
+    for (moved in event.blocks) {
+      val fromLoc = moved.location
+      val toLoc = moved.getRelative(dir).location
+
+      if (toLoc.inBufferZone() || toLoc.onDifferentSide(fromLoc)) {
+        event.isCancelled = true
+        return
+      }
+    }
   }
 
   @EventHandler
@@ -120,11 +158,9 @@ class CheatListener(plugin: Plugin) : Listener {
     }
 
     //snark
-    val playerPdc = event.player.persistentDataContainer
-    val firstAttempt = playerPdc.get(splitWorldConfig().keys.firstFishAttempt, PersistentDataType.INTEGER)
-    if (firstAttempt == null) {
+    if (event.player.firstFishAttempt) {
       event.player.giveExp(100)
-      playerPdc.set(splitWorldConfig().keys.firstFishAttempt, PersistentDataType.INTEGER, 1)
+      event.player.firstFishAttempt = false
     }
     event.player.sendMessage("Nice try.")
   }
