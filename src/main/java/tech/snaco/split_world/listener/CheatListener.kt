@@ -4,8 +4,10 @@ import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.block.BlockFromToEvent
 import org.bukkit.event.entity.EntityPortalEvent
+import org.bukkit.event.inventory.InventoryOpenEvent
 import org.bukkit.event.player.PlayerDropItemEvent
 import org.bukkit.event.player.PlayerFishEvent
+import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.persistence.PersistentDataType
 import org.bukkit.plugin.Plugin
 import org.bukkit.scheduler.BukkitRunnable
@@ -21,15 +23,11 @@ class CheatListener(plugin: Plugin) : Listener {
         if (droppedItems.size.toLong() > 0) {
           val droppedItemsToStopTracking = ArrayList<DroppedItem>()
           for (droppedItem in droppedItems) {
-            if (droppedItem.item.world.isSplit()
-              && droppedItem.item.location.inBufferZone()
-              && !droppedItem.previousLocation.inBufferZone()
-            ) {
-              droppedItem.item.remove()
+            if (droppedItem.item.world.isSplit() && droppedItem.item.location.inBufferZone() && !droppedItem.previousLocation.inBufferZone()) {
               droppedItem.cheater.sendMessage("Stop that")
-              droppedItem.item.velocity = droppedItem.item.velocity.multiply(-2.0)
               droppedItem.cheater.inventory.addItem(droppedItem.item.itemStack)
               droppedItemsToStopTracking.add(droppedItem)
+              droppedItem.item.remove()
             } else {
               droppedItem.previousLocation = droppedItem.item.location
             }
@@ -51,11 +49,43 @@ class CheatListener(plugin: Plugin) : Listener {
   }
 
   @EventHandler
+  fun onPlayerInteract(event: PlayerInteractEvent) {
+    if (!event.player.world.isSplit()) {
+      return
+    }
+    if (event.clickedBlock != null && event.clickedBlock!!.onDifferentSide(event.player.location)) {
+      event.isCancelled = true
+    }
+    if (event.interactionPoint != null && event.interactionPoint!!.onDifferentSide(event.player.location)) {
+      event.isCancelled = true
+    }
+  }
+
+  @EventHandler
+  fun onInventoryOpen(event: InventoryOpenEvent) {
+    if (!event.player.world.isSplit()) {
+      return
+    }
+    if (event.player.location.onDifferentSide(event.inventory.location!!) &&
+      event
+        .inventory
+        .location!!
+        .getRelevantPos() != event.player.world
+        .splitConfig()
+        .borderWidth()
+    ) {
+      event.isCancelled = true
+    }
+    if (event.player.location.inBufferZone()) {
+      event.isCancelled = true
+    }
+  }
+
+  @EventHandler
   fun onPlayerDrop(event: PlayerDropItemEvent) {
     if (!event.player.world.isSplit()) {
       return
     }
-//    if (!event.player.location.onNegativeSideOfBuffer() && !event.player.location.onPositiveSideOfBuffer()) {
     if (event.player.location.inBufferZone()) {
       event.isCancelled = true
       return

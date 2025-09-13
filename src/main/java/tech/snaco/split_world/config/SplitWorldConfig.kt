@@ -22,9 +22,9 @@ class SplitWorldConfig(
 
   fun enabled(): Boolean = map["enabled"] as? Boolean ?: false
   fun borderAxis(): String = map["border_axis"] as? String ?: "X"
-  fun borderLocation(): Int = (map["border_location"] as? Number)?.toInt() ?: 0
+  fun borderLocation(): Double = (map["border_location"] as? Number)?.toDouble() ?: 0.0
   fun creativeSide(): String = map["creative_side"] as? String ?: "negative"
-  fun borderWidth(): Int = map["border_width"] as? Int ?: 10
+  fun borderWidth(): Double = (map["border_width"] as? Number)?.toDouble() ?: 10.0
   fun replaceBorderBlocks(): Boolean = (map["replace_border_blocks"] as? Boolean) ?: true
   fun noCreativeMonsters(): Boolean = (map["no_creative_monsters"] as? Boolean) ?: false
 

@@ -1,8 +1,10 @@
 package tech.snaco.split_world.listener
 
+import com.destroystokyo.paper.event.player.PlayerPostRespawnEvent
 import net.kyori.adventure.text.Component
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
+import org.bukkit.event.player.PlayerChangedWorldEvent
 import org.bukkit.event.player.PlayerJoinEvent
 import org.bukkit.event.player.PlayerRespawnEvent
 import org.spigotmc.event.player.PlayerSpawnLocationEvent
@@ -38,6 +40,25 @@ class SpawnListener : Listener {
     if (splitWorldConfig().customRespawn() && !event.isAnchorSpawn && !event.isBedSpawn) {
       event.respawnLocation = splitWorldConfig().respawnLocation()
     }
+    if (!event.player.splitWorldDisabled) {
+      event.player.switchToConfiguredGameMode()
+    }
+  }
+
+  @EventHandler
+  fun postRespawn(event: PlayerPostRespawnEvent) {
+    if (event.player.splitWorldDisabled) {
+      return
+    }
+    event.player.switchToConfiguredGameMode()
+  }
+
+  @EventHandler
+  fun post(event: PlayerChangedWorldEvent) {
+    if (event.player.splitWorldDisabled) {
+      return
+    }
+    event.player.switchToConfiguredGameMode()
   }
 
   @EventHandler

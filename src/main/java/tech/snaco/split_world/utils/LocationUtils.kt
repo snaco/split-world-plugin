@@ -22,22 +22,22 @@ fun Location.onDifferentSide(otherLocation: Location): Boolean {
 }
 
 fun Location.onCreativeSide(): Boolean {
+  return onCreativeSide(0.0)
+}
+
+fun Location.onCreativeSide(offset: Double): Boolean {
   return if (this.world
       .splitConfig()
-      .creativeSide() == "negative" && this.onNegativeSideOfBuffer()
+      .creativeSide() == "negative" && this.onNegativeSideOfBuffer(offset)
   ) {
     true
   } else this.world
     .splitConfig()
-    .creativeSide() == "positive" && this.onPositiveSideOfBuffer()
+    .creativeSide() == "positive" && this.onPositiveSideOfBuffer(offset)
 }
 
 fun Location.inBufferZone(): Boolean {
-//  val worldConfig = this.world.splitConfig()
-//  val pos = this.getRelevantPos()
-//  val borderLocation = worldConfig.borderLocation()
   return !onNegativeSideOfBuffer() && !onPositiveSideOfBuffer()
-//  return (pos > borderLocation - worldConfig.borderWidth() && pos <= borderLocation + worldConfig.borderWidth())
 }
 
 fun Location.getRelevantPos(): Double {
@@ -56,9 +56,7 @@ fun Location.onNegativeSideOfBuffer(): Boolean {
 }
 
 fun Location.onNegativeSideOfBuffer(extra: Double): Boolean {
-  val pos = this.getRelevantPos()
-  val worldConfig = this.world.splitConfig()
-  return pos <= worldConfig.borderLocation() - worldConfig.borderWidth() - extra
+  return getRelevantPos() < world.splitConfig().borderLocation() - world.splitConfig().borderWidth() - extra
 }
 
 fun Location.onPositiveSideOfBuffer(): Boolean {
@@ -66,9 +64,7 @@ fun Location.onPositiveSideOfBuffer(): Boolean {
 }
 
 fun Location.onPositiveSideOfBuffer(extra: Double): Boolean {
-  val pos = this.getRelevantPos()
-  val worldConfig = this.world.splitConfig()
-  return pos > worldConfig.borderLocation() + worldConfig.borderWidth() + extra
+  return getRelevantPos() > world.splitConfig().borderLocation() + world.splitConfig().borderWidth() + extra
 }
 
 fun Location.isTraversable(): Boolean {

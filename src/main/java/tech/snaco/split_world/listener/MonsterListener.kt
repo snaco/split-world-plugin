@@ -36,7 +36,7 @@ class MonsterListener : Listener {
     if (!event.entity.world.isSplit()) {
       return
     }
-    if (event.target is Player && !(event.target as Player).location.onDefaultSide()) {
+    if (event.entity.location.onDifferentSide(event.target!!.location)) {
       event.isCancelled = true
     }
   }

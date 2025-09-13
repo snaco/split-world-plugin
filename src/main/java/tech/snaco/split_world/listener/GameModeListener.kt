@@ -42,26 +42,6 @@ class GameModeListener : Listener {
     if (event.player.splitDisabled()) {
       return
     }
-//    if (event.player.world.isSplit()) {
-//      // handle transitioning to survival safely
-//      if (event.player.gameMode != GameMode.SURVIVAL
-//        && event.to.onDefaultSide()
-//        && event.player.location.onDefaultSide()
-//      ) {
-//        // temporarily load survival inv to check equip status
-//        event.player.loadInventory()
-//        val playerHasElytraEquipped = event.player.inventory.chestplate?.type == Material.ELYTRA
-//        event.player.inventory.clear()
-//        event.player.enderChest.contents
-//        if (playerHasElytraEquipped && event.player.location.block.type == Material.AIR) {
-//          event.player.isGliding = true
-//        }
-//        if (!playerHasElytraEquipped && event.player.location.onDefaultSide() && event.player.inAir()) {
-//          event.player.velocity = Vector(0, 0, 0)
-//          event.player.warpToGround()
-//        }
-//      }
-//    }
     event.player.switchToConfiguredGameMode()
   }
 

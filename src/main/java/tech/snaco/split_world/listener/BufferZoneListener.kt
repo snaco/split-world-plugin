@@ -43,8 +43,8 @@ class BufferZoneListener : Listener {
             if (block.type.isAir || block.type == Material.LAVA || block.type == Material.WATER || block.type == Material.SNOW) {
               continue
             }
-            if (block.location.addAcrossSplitAxis(1.0).inBufferZone()) {
-              block.type = Material.BLACK_CONCRETE
+            if (block.inBufferZone) {
+              block.type = Material.COPPER_BLOCK
             }
           }
         }
@@ -54,6 +54,7 @@ class BufferZoneListener : Listener {
 
   @EventHandler
   fun onPlayerMove(event: PlayerMoveEvent) {
+    print(event.player.location.getRelevantPos())
     if (event.player.world.isSplit() && !event.player.splitDisabled()) {
       if (event.player.location.inBufferZone()) {
         if (!event.to.isTraversable()) {
@@ -91,10 +92,13 @@ class BufferZoneListener : Listener {
     if (!event.block.world.isSplit()) {
       return
     }
-    if (event.block.location.inBufferZone()) {
+    if (event.block.inBufferZone && !player.location.inBufferZone()) {
       event.isCancelled = true
     }
-    if (event.block.location.onDefaultSide() && player.location.inBufferZone()) {
+    if (player.location.onCreativeSide() && !event.block.onCreativeSide) {
+      event.isCancelled = true
+    }
+    if (player.location.onDefaultSide() && !event.block.onDefaultSide) {
       event.isCancelled = true
     }
   }

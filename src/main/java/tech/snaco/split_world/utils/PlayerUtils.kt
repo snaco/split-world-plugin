@@ -190,10 +190,10 @@ fun Player.hearThatDing() =
 
 fun Player.switchGameMode(toTheOneItShouldBe: GameMode) {
   if (my.gameMode != toTheOneItShouldBe) {
-    and_if (I.shouldHearTheDing) { ->
+    and_if(I.shouldHearTheDing) { ->
       then.I.hearThatDing()
     }
-    and_if (I.also.shouldSeeTheSparkle) { ->
+    and_if(I.also.shouldSeeTheSparkle) { ->
       then.I.seeThatSparkle()
     }
     also
@@ -221,7 +221,9 @@ val Player.that: Player get() = this
 val Player.my: Player get() = this
 val Player.I: Player get() = this
 val Player.and: Player get() = this
-fun Player.and_if(condition: Boolean, op: () -> Any?) = if (condition) op() else {}
+fun Player.and_if(condition: Boolean, op: () -> Any?) = if (condition) op() else {
+}
+
 val Player.then: Player get() = this
 val Player.at: Player get() = this
 val Player.also: Player get() = this
@@ -232,19 +234,23 @@ val Player.but: Player get() = this
 
 
 fun Player.switchToConfiguredGameMode() {
-  if (!my.world.isSplit()) {
+  if (splitWorldDisabled) {
+    return
+  }
+  if (!world.isSplit()) {
     switchGameMode(
-      my.world
+      world
         .splitConfig()
         .defaultGameMode()
     )
     return
   }
-  // set to spectator for buffer zone
   if (location.inBufferZone()) {
+    val wasFlying = isFlying
+    val wasGliding = isGliding
     switchGameMode(GameMode.ADVENTURE)
     allowFlight = true
-    if (isGliding || isFlying) {
+    if (wasGliding || wasFlying) {
       isFlying = true
     }
 
@@ -255,8 +261,12 @@ fun Player.switchToConfiguredGameMode() {
   } else if (location.onCreativeSide()) {
     switchGameMode(GameMode.CREATIVE)
     // survival side
-  } else {
-    switchGameMode(GameMode.SURVIVAL)
+  } else if (location.onDefaultSide()) {
+    switchGameMode(
+      world
+        .splitConfig()
+        .defaultGameMode()
+    )
   }
 }
 
