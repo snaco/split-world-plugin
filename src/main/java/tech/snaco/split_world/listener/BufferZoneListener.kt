@@ -82,6 +82,9 @@ class BufferZoneListener : Listener {
     if (event.entity.world.isSplit() && event.entity is Player && event.entity.location.inBufferZone()) {
       event.isCancelled = true
     }
+    if (event.damager.world.isSplit() && event.damager is Player && event.damager.location.inBufferZone()) {
+      event.isCancelled = true
+    }
   }
 
   @EventHandler
