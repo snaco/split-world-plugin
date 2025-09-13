@@ -40,6 +40,10 @@ fun Location.inBufferZone(): Boolean {
   return !onNegativeSideOfBuffer() && !onPositiveSideOfBuffer()
 }
 
+fun Location.inBufferZone(extra: Double): Boolean {
+  return !onNegativeSideOfBuffer(extra) && !onPositiveSideOfBuffer(extra)
+}
+
 fun Location.getRelevantPos(): Double {
   return when (this.world
     .splitConfig()

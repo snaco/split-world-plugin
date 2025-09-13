@@ -55,7 +55,7 @@ class MonsterListener : Listener {
       return
     }
     // stop no crossing unless you are a player
-    if (event.to.inBufferZone()) {
+    if (event.to.inBufferZone(0.5)) {
       event.isCancelled = true
     }
     // only remove monsters on the creative side
