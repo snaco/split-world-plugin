@@ -27,15 +27,22 @@ class SplitServerConfig(val plugin: SplitWorldPlugin) {
 
   fun easterEggsEnabled(): Boolean = plugin.config.getBoolean("enable_easter_eggs", false)
   fun customRespawn(): Boolean = plugin.config.getBoolean("custom_respawn", false)
-  fun respawnWorld(): World = plugin.config
-    .getString("respawn_world")
-    ?.let { Bukkit.getWorld(it) }
-    ?: plugin.server.worlds[0]
-
-  fun respawnLocation(): Location = plugin.config
-    .getObject("respawn_location", Location::class.java)
-    ?.let { Location(respawnWorld(), it.x, it.y, it.z, it.yaw, it.pitch) }
-    ?: Location(respawnWorld(), 0.0, 0.0, 0.0)
+  fun respawnLocation(): Location {
+    val locationCfg = plugin.config.getConfigurationSection("respawn_location")
+      ?: error("Missing respawn_location section of split world config")
+    locationCfg.contains("x") || error("Missing x coordinate in respawn_location section of split world config")
+    locationCfg.contains("y") || error("Missing y coordinate in respawn_location section of split world config")
+    locationCfg.contains("z") || error("Missing z coordinate in respawn_location section of split world config")
+    val world = Bukkit.getWorld(
+      locationCfg.getString("world") ?: error("Missing world name in respawn_location section of split world config")
+    ) ?: error("Invalid world name in respawn_location section of split world config")
+    val x = locationCfg.getDouble("x")
+    val y = locationCfg.getDouble("y")
+    val z = locationCfg.getDouble("z")
+    val yaw = locationCfg.getDouble("yaw", 0.0)
+    val pitch = locationCfg.getDouble("yaw", 0.0)
+    return Location(world, x, y, z, yaw.toFloat(), pitch.toFloat())
+  }
 
   fun worldConfigs(): Map<World, SplitWorldConfig> = plugin.config
     .getMapList("world_configs")

@@ -44,8 +44,8 @@ creative_commands:
 # nearest safe Y coordinate above the specified location
 # where safe is defined by not suffocating or falling.
 custom_respawn: false
-respawn_world: "split_world"
 respawn_location:
+  world: "split_world"
   x: 140.0
   y: 53.0
   z: -64.0
