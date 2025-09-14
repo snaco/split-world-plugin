@@ -1,4 +1,4 @@
-package tech.snaco.split_world
+package tech.snaco.split_world.utils
 
 import org.bukkit.GameMode
 import org.bukkit.Location
@@ -6,9 +6,8 @@ import org.bukkit.command.Command
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import org.bukkit.event.player.PlayerCommandPreprocessEvent
-import tech.snaco.split_world.utils.*
 
-class SplitWorldCommands() {
+class CommandUtils() {
 
   fun onTabComplete(command: Command, args: Array<out String>?): List<String>? {
     if (command.name.equals("play-border-sound", ignoreCase = true) && args!!.size == 1) {
