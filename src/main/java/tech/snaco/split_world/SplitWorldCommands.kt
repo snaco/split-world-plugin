@@ -20,12 +20,12 @@ class SplitWorldCommands() {
   }
 
   fun preProcessCommand(event: PlayerCommandPreprocessEvent) {
-    if (!splitWorldConfig().manageCreativeCommands() || event.player.isOp) {
+    if (!splitWorldPlugin().splitServerConfig.manageCreativeCommands() || event.player.isOp) {
       return
     }
 
     // creative commands allowed in the creative zones, these will be blocked in survival mode
-    val creativeCommands = splitWorldConfig().creativeCommands()
+    val creativeCommands = splitWorldPlugin().splitServerConfig.creativeCommands()
     val player = event.player
     val commandStr = event.message
     val commandArgs = commandStr
@@ -51,8 +51,7 @@ class SplitWorldCommands() {
     val locations: List<Location> = getLocations(coordinates, player) ?: return
     for (location in locations) {
       if (!location.onCreativeSide()) {
-
-        if (splitWorldConfig()
+        if (splitWorldPlugin().splitServerConfig
             .worldConfigs()
             .filter { it.value.enabled() }
             .isNotEmpty()

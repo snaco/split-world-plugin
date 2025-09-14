@@ -1,59 +1,53 @@
 package tech.snaco.split_world.listener
 
+import com.destroystokyo.paper.event.player.PlayerPostRespawnEvent
 import org.bukkit.GameMode
 import org.bukkit.event.EventHandler
+import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.player.PlayerChangedWorldEvent
 import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.event.player.PlayerRespawnEvent
 import org.bukkit.event.player.PlayerTeleportEvent
-import tech.snaco.split_world.utils.*
+import tech.snaco.split_world.utils.inAir
+import tech.snaco.split_world.utils.switchToConfiguredGameMode
+import tech.snaco.split_world.utils.warpToGround
 
 class GameModeListener : Listener {
 
-  @EventHandler
+  @EventHandler(priority = EventPriority.HIGHEST)
   fun onTeleport(event: PlayerTeleportEvent) {
-    val destination = event.to
-    val player = event.player
-    if (!destination.world.isSplit()) {
-      player.switchGameMode(
-        destination.world
-          .splitConfig()
-          .defaultGameMode()
-      )
-      return
-    }
-    if (destination.inBufferZone()) {
-      player.switchGameMode(GameMode.ADVENTURE)
-      return
-    } else if (destination.onCreativeSide()) {
-      player.switchGameMode(GameMode.CREATIVE)
-      return
-    }
-    val needsWarp = player.gameMode != GameMode.SURVIVAL
-    player.switchGameMode(GameMode.SURVIVAL)
-    if (needsWarp) {
-      player.warpToGround()
+    event.player.switchToConfiguredGameMode()
+    if (event.player.inAir() && event.player.gameMode == GameMode.SURVIVAL) {
+      event.player.warpToGround()
     }
   }
 
-  @EventHandler
+  @EventHandler(priority = EventPriority.HIGHEST)
   fun onPlayerMove(event: PlayerMoveEvent) {
-    if (event.player.splitWorldDisabled) {
-      return
-    }
     event.player.switchToConfiguredGameMode()
   }
 
-  @EventHandler
+  @EventHandler(priority = EventPriority.HIGHEST)
   fun onPlayerWorldChange(event: PlayerChangedWorldEvent) {
-    if (event.player.world.isSplit()) {
-      event.player.switchToConfiguredGameMode()
-    }
+    event.player.switchToConfiguredGameMode()
   }
 
-  @EventHandler
+  @EventHandler(priority = EventPriority.HIGHEST)
+  fun postRespawn(event: PlayerPostRespawnEvent) {
+    event.player.switchToConfiguredGameMode()
+  }
+
+  @EventHandler(priority = EventPriority.HIGHEST)
   fun onPlayerRespawn(event: PlayerRespawnEvent) {
     event.player.switchToConfiguredGameMode()
   }
+
+  @EventHandler(priority = EventPriority.HIGHEST)
+  fun onPlayerJoin(event: PlayerRespawnEvent) {
+    event.player.switchToConfiguredGameMode()
+  }
+
+
+
 }

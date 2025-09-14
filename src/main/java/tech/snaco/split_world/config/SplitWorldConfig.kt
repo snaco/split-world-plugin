@@ -5,7 +5,7 @@ import org.bukkit.configuration.serialization.ConfigurationSerializable
 import java.util.*
 
 class SplitWorldConfig(
-  private val map: Map<String, Any>, private val splitServer: SplitServer
+  private val map: Map<String, Any>, private val splitServerConfig: SplitServerConfig
 ) : ConfigurationSerializable {
 
   fun worldName(): String = map["world_name"] as? String
@@ -16,17 +16,17 @@ class SplitWorldConfig(
       try {
         GameMode.valueOf(it.uppercase(Locale.ENGLISH))
       } catch (_: IllegalArgumentException) {
-        splitServer.defaultGameMode()
+        splitServerConfig.defaultGameMode()
       }
-    } ?: splitServer.defaultGameMode()
+    } ?: splitServerConfig.defaultGameMode()
 
   fun enabled(): Boolean = map["enabled"] as? Boolean ?: false
-  fun borderAxis(): String = map["border_axis"] as? String ?: "X"
+  fun borderAxis(): String = map["border_position"] as? String ?: "X"
   fun borderLocation(): Double = (map["border_location"] as? Number)?.toDouble() ?: 0.0
   fun creativeSide(): String = map["creative_side"] as? String ?: "negative"
-  fun borderWidth(): Double = (map["border_width"] as? Number)?.toDouble() ?: 10.0
+  fun borderWidth(): Double = (map["border_width"] as? Number)?.toDouble() ?: 5.0
   fun replaceBorderBlocks(): Boolean = (map["replace_border_blocks"] as? Boolean) ?: true
-  fun noCreativeMonsters(): Boolean = (map["no_creative_monsters"] as? Boolean) ?: false
+  fun noCreativeMonsters(): Boolean = (map["no_creative_monsters"] as? Boolean) ?: true
 
   @Suppress("UNCHECKED_CAST")
   override fun serialize(): Map<String, Any> = mapOf(

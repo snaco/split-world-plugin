@@ -1,15 +1,11 @@
 package tech.snaco.split_world.config
 
-import org.bukkit.Bukkit
-import org.bukkit.GameMode
-import org.bukkit.Location
-import org.bukkit.World
+import org.bukkit.*
 import tech.snaco.split_world.SplitWorldPlugin
 
 /** Root config loaded from config.yml in a type-safe way. */
 @Suppress("UNCHECKED_CAST")
-class SplitServer(val plugin: SplitWorldPlugin) {
-
+class SplitServerConfig(val plugin: SplitWorldPlugin) {
   fun defaultGameMode(): GameMode = plugin.config
     .getString("default_game_mode")
     ?.let {
@@ -38,7 +34,7 @@ class SplitServer(val plugin: SplitWorldPlugin) {
 
   fun respawnLocation(): Location = plugin.config
     .getObject("respawn_location", Location::class.java)
-    ?.let { Location(respawnWorld(), it.x, it.y, it.z, it.pitch, it.yaw) }
+    ?.let { Location(respawnWorld(), it.x, it.y, it.z, it.yaw, it.pitch) }
     ?: Location(respawnWorld(), 0.0, 0.0, 0.0)
 
   fun worldConfigs(): Map<World, SplitWorldConfig> = plugin.config
@@ -54,6 +50,12 @@ class SplitServer(val plugin: SplitWorldPlugin) {
 
   init {
     plugin.saveDefaultConfig()
+    if (Bukkit.getWorld("split_world") == null) {
+      Bukkit.createWorld(WorldCreator("split_world"))
+    }
+    if (Bukkit.getWorld("creative_world") == null) {
+      Bukkit.createWorld(WorldCreator("creative_world"))
+    }
   }
 }
 

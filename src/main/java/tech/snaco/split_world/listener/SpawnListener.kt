@@ -1,20 +1,22 @@
 package tech.snaco.split_world.listener
 
-import com.destroystokyo.paper.event.player.PlayerPostRespawnEvent
 import net.kyori.adventure.text.Component
 import org.bukkit.event.EventHandler
+import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
-import org.bukkit.event.player.PlayerChangedWorldEvent
 import org.bukkit.event.player.PlayerJoinEvent
 import org.bukkit.event.player.PlayerRespawnEvent
 import org.spigotmc.event.player.PlayerSpawnLocationEvent
-import tech.snaco.split_world.utils.*
+import tech.snaco.split_world.utils.firstJoin
+import tech.snaco.split_world.utils.splitConfig
+import tech.snaco.split_world.utils.splitWorldPlugin
+import tech.snaco.split_world.utils.welcomeMessageDisabled
 
 class SpawnListener : Listener {
 
   @EventHandler
   fun onPlayerJoin(event: PlayerJoinEvent) {
-    if (splitWorldConfig().disableWelcomeMessage()) {
+    if (splitWorldPlugin().splitServerConfig.disableWelcomeMessage()) {
       return
     }
 
@@ -35,42 +37,18 @@ class SpawnListener : Listener {
     }
   }
 
-  @EventHandler
+  @EventHandler(priority = EventPriority.LOWEST)
   fun onPlayerRespawn(event: PlayerRespawnEvent) {
-    if (splitWorldConfig().customRespawn() && !event.isAnchorSpawn && !event.isBedSpawn) {
-      event.respawnLocation = splitWorldConfig().respawnLocation()
-    }
-    if (!event.player.splitWorldDisabled) {
-      event.player.switchToConfiguredGameMode()
+    if (splitWorldPlugin().splitServerConfig.customRespawn() && !event.isAnchorSpawn && !event.isBedSpawn) {
+      event.respawnLocation = splitWorldPlugin().splitServerConfig.respawnLocation()
     }
   }
 
-  @EventHandler
-  fun postRespawn(event: PlayerPostRespawnEvent) {
-    if (event.player.splitWorldDisabled) {
-      return
-    }
-    event.player.switchToConfiguredGameMode()
-  }
-
-  @EventHandler
-  fun post(event: PlayerChangedWorldEvent) {
-    if (event.player.splitWorldDisabled) {
-      return
-    }
-    event.player.switchToConfiguredGameMode()
-  }
-
-  @EventHandler
+  @EventHandler(priority = EventPriority.LOWEST)
   fun onSpawn(event: PlayerSpawnLocationEvent) {
-    event.player.switchGameMode(
-      event.player.world
-        .splitConfig()
-        .defaultGameMode()
-    )
-    if (splitWorldConfig().customRespawn() && event.player.firstJoin) {
+    if (splitWorldPlugin().splitServerConfig.customRespawn() && event.player.firstJoin) {
       event.player.firstJoin = false
-      event.spawnLocation = splitWorldConfig().respawnLocation()
+      event.spawnLocation = splitWorldPlugin().splitServerConfig.respawnLocation()
     }
   }
 }

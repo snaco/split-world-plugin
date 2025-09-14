@@ -16,32 +16,31 @@ import org.bukkit.plugin.Plugin
 import org.bukkit.scheduler.BukkitRunnable
 import tech.snaco.split_world.extras.easter_eggs.Messages
 import tech.snaco.split_world.utils.netherEgg
-import tech.snaco.split_world.utils.splitWorldConfig
+import tech.snaco.split_world.utils.splitWorldPlugin
 
 class EasterEggListener(plugin: Plugin) : Listener {
   private val playersSleepingInNether = HashSet<Player>()
-  private val enabled = splitWorldConfig().easterEggsEnabled()
 
   init {
-    if (enabled) {
-      object : BukkitRunnable() {
-        override fun run() {
+    object : BukkitRunnable() {
+      override fun run() {
+        if (splitWorldPlugin().splitServerConfig.easterEggsEnabled()) {
           Messages.runNetherSleepTask(playersSleepingInNether)
         }
-      }.runTaskTimer(plugin, 20L, 1L)
-    }
+      }
+    }.runTaskTimer(plugin, 20L, 1L)
   }
 
   @EventHandler
   fun onDeath(event: PlayerDeathEvent) {
-    if (enabled) {
+    if (splitWorldPlugin().splitServerConfig.easterEggsEnabled()) {
       playersSleepingInNether.remove(event.player)
     }
   }
 
   @EventHandler
   fun itemInteract(event: PlayerInteractEvent) {
-    if (enabled && event.item?.type == Material.DIAMOND) {
+    if (splitWorldPlugin().splitServerConfig.easterEggsEnabled() && event.item?.type == Material.DIAMOND) {
       event.player.playSound(event.player.location, Sound.ENTITY_GENERIC_EAT, 1.0f, 1.0f)
       event.player.inventory
         .getItem(event.player.inventory.indexOf(event.item!!))!!
@@ -53,7 +52,7 @@ class EasterEggListener(plugin: Plugin) : Listener {
 
   @EventHandler
   fun enterBed(event: PlayerBedEnterEvent) {
-    if (enabled) {
+    if (splitWorldPlugin().splitServerConfig.easterEggsEnabled()) {
       if (event.player.netherEgg >= 1561) {
         return
       }
@@ -66,7 +65,7 @@ class EasterEggListener(plugin: Plugin) : Listener {
 
   @EventHandler
   fun enterDeepSleep(event: PlayerDeepSleepEvent) {
-    if (splitWorldConfig().easterEggsEnabled()) {
+    if (splitWorldPlugin().splitServerConfig.easterEggsEnabled()) {
       if (event.player.world.name.endsWith("_nether")) {
         playersSleepingInNether.add(event.player)
         event.isCancelled = true
@@ -76,7 +75,7 @@ class EasterEggListener(plugin: Plugin) : Listener {
 
   @EventHandler
   fun leaveBed(event: PlayerBedLeaveEvent) {
-    if (splitWorldConfig().easterEggsEnabled()) {
+    if (splitWorldPlugin().splitServerConfig.easterEggsEnabled()) {
       if (event.player.world.name.endsWith("_nether")) {
         playersSleepingInNether.remove(event.player)
       }

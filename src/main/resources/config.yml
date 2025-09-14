@@ -1,28 +1,50 @@
-# Split World Config
+###
+#  Split World Config
+#  Please report bugs and exploits:
+#     https://github.com/snaco/split-world-plugin/issues/
+#  A copy of the latest default config can be found at:
+#     https://github.com/snaco/split-world-plugin/blob/master/src/main/resources/config.yml
+#  When updating, please make sure to read the changelog:
+#     https://github.com/snaco/split-world-plugin/releases
+###
 
-# Global game mode to default to for worlds with split world disabled, you can override this per-world in their config
+# Global game mode for all worlds that are disabled
+# or not configured with a default_game_mode
 default_game_mode: "survival"
 
-# Disables the welcome message for everyone when set to true, default is false. Players can always individually disable
+# Disables the welcome message for everyone when set
+# to true. Players can always individually disable
 # the welcome message with the /understood command
 disable_welcome_message: false
 
-# when set to true, this will change the XP loss behavior on death to lose a specified percentage of XP upon death
+# When set to true, this will change the XP loss
+# behavior on death to lose the specified percentage
 enable_xp_mod: false
 xp_loss_percentage: 25.0
 
-# allows players to use the specified commands on the creative side. Make sure that by
-# default these players have permission to use them. split-world will make sure they
-# can't use fill, setblock, or clone on or targeting blocks outside of creative zones
+# Allow players to use the specified commands
+# on the creative side. Players must have permission
+# to use the listed command. split-world will ensure
+# that any commands listed will only be executable
+# on the creative side. Additionally, it will always
+# ensure that the fill, setblock, and clone commands
+# cannot include blocks outside the creative zone.
+#
+# Be careful choosing which commands you allow on the
+# creative side. If the command takes coordinates as
+# arguments, they can be used to affect things outside
+# the creative zone.
 manage_creative_commands: true
 creative_commands:
   - fill
   - setblock
   - clone
 
-# set a custom respawn point, allows you to spawn underground but not in solid blocks.
+# Set a custom respawn point. Will spawn player at the
+# nearest safe Y coordinate above the specified location
+# where safe is defined by not suffocating or falling.
 custom_respawn: false
-respawn_world: "world"
+respawn_world: "split_world"
 respawn_location:
   x: 140.0
   y: 53.0
@@ -30,68 +52,49 @@ respawn_location:
   yaw: 0.0
   pitch: 0.0
 
-# custom spawn protection
-competition_area:
-  - x1: 0
-  - y1: 0
-  - z1: 0
-  - x2: 0
-  - y2: 0
-  - z2: 0
 
-# Per world configs, this should theoretically work for any world but is only tested on default minecraft worlds
-world_configs:
-  - world_name: "world"
-
-    # OPTIONAL
-    # override the global default game mode, this applies whether split world is enabled for the world or not
-    default_game_mode: "survival"
-
-    # REQUIRED
-    # when true, split-world will manage the game mode of all players and keep their inventories separate by saving
-    # and loading them when they cross the border
-    enabled: true
-
-    # REQUIRED when enabled: true
-    # which axis should the border be placed on
-    border_axis: "X"
-
-    # REQUIRED when enabled: true
-    # changing this will place the border at the specified coordinate, being on the "negative" side is defined by
-    # having a coordinate value less than border_location value + half of the border_width.
-    border_location: 0
-
-    # REQUIRED when enabled: true
-    # positive or negative, the positive side is any value of the [border_axis] greater than the [border_location],
-    # the negative side is any value of the [border_axis] less than [border-location]
-    creative_side: "negative"
-
-    # REQUIRED when enabled: true
-    # defines the width of the border, while in this zone players will be put in adventure mode, hunger will not deplete
-    # this is how many blocks on each side of the border will be considered buffer zones.
-    # The total size of the border is border_width * 2
-    border_width: 5
-
-    # REQUIRED when enabled: true
-    # Replace all blocks with bedrock along the border as players encounter it.
-    replace_border_blocks: true
-
-    # REQUIRED when enabled: true
-    # Prevent monsters from spawning on the creative side
-    no_creative_monsters: true
-
-  - world_name: "world_nether"
-    default_game_mode: "survival"
-    enabled: false
-    border_axis: "X"
-    border_location: 0
-    creative_side: "negative"
-    border_width: 10
-    replace_border_blocks: true
-    no_creative_monsters: true
-
-  - world_name: "world_the_end"
-    default_game_mode: "survival"
-    enabled: false
-
+# secret easter-eggs
 enable_easter_eggs: false
+
+# Per world configs
+world_configs:
+  - world_name: "split_world"
+    enabled: true
+  - world_name: "creative_world"
+    game_mode: "creative"
+
+  # These are the default values for enabled worlds:
+  #
+  # border_position: "X"
+  # border_location: 0
+  # creative_side: "negative"
+  # border_width: 5
+  # replace_border_blocks: true
+  # no_creative_monsters: true
+  #
+  # you can also set the default_game_mode for a world
+  # to override the global default_game_mode for just that
+  # world without needing to enable split-world
+  #
+  # default_game_mode: "survival"
+  #
+  # example world config to enable split-world for the world
+  #  - world_name: "world"
+  #    enabled: true
+  #
+  # example world config to make a creative world
+  #  - world_name: "creative_world"
+  #    default_game_mode: "creative"
+  #
+  # example world config with custom border settings
+  #
+  #  - world_name: "world"
+  #    enabled: true
+  #    default_game_mode: "adventure"
+  #    border_position: "Z"
+  #    border_location: 200
+  #    creative_side: "positive"
+  #    border_width: 2
+  #    replace_border_blocks: true
+  #    no_creative_monsters: false
+  #

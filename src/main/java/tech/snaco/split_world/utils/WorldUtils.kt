@@ -8,11 +8,13 @@ fun World.isSplit(): Boolean {
 }
 
 fun World.splitConfig(): SplitWorldConfig {
-  return splitWorldConfig().worldConfigs()[this] ?: SplitWorldConfig(
+  return splitWorldPlugin().splitServerConfig.worldConfigs()[this] ?: SplitWorldConfig(
     mapOf(
       "world_name" to this.name,
       "enabled" to false,
     ),
-    splitWorldConfig()
+    splitWorldPlugin().splitServerConfig
   )
 }
+
+val World.defaultGameMode get() = splitConfig().defaultGameMode()

@@ -8,15 +8,11 @@ import org.bukkit.persistence.PersistentDataType
 import org.bukkit.potion.PotionEffect
 import org.bukkit.scheduler.BukkitTask
 import org.bukkit.util.Vector
-import tech.snaco.split_world.SplitWorldPlugin
+import tech.snaco.split_world.event.AfterGameModeChangeEvent
+import tech.snaco.split_world.event.BeforeGameModeChangeEvent
 import tech.snaco.split_world.types.ItemStackArrayDataType
 import tech.snaco.split_world.types.PotionEffectArrayDataType
 
-private fun getPlugin(): SplitWorldPlugin {
-  return Bukkit
-    .getPluginManager()
-    .getPlugin("SplitWorld") as? SplitWorldPlugin ?: error("SplitWorld plugin not loaded!")
-}
 
 fun Player.preventFirstFallDamage() {
   val hadAllowFlight = allowFlight
@@ -27,65 +23,51 @@ fun Player.preventFirstFallDamage() {
   }
 
   var taskRef: BukkitTask? = null
-  taskRef = Bukkit.getScheduler().runTaskTimer(getPlugin(), Runnable {
-    // Stop when the player touches ground or becomes invalid
-    if (isOnGround || !isValid || isDead) {
-      isGliding = false
-      allowFlight = hadAllowFlight
-      taskRef?.cancel()
-    }
-  }, 1L, 1L)
+  taskRef = Bukkit
+    .getScheduler()
+    .runTaskTimer(splitWorldPlugin(), Runnable {
+      // Stop when the player touches the ground or becomes invalid
+      if (isOnGround || !isValid || isDead) {
+        isGliding = false
+        allowFlight = hadAllowFlight
+        taskRef?.cancel()
+      }
+    }, 1L, 1L)
 }
 
 fun Player.getInventoryKey(gameMode: GameMode): NamespacedKey {
-  return NamespacedKey(getPlugin(), name + "_" + gameMode.name.lowercase() + "_inv")
-}
-
-fun Player.getInventoryKey(): NamespacedKey {
-  return getInventoryKey(gameMode)
+  return NamespacedKey(splitWorldPlugin(), name + "_" + gameMode.name.lowercase() + "_inv")
 }
 
 fun Player.getEnderChestKey(gameMode: GameMode): NamespacedKey {
-  return NamespacedKey(getPlugin(), name + "_" + gameMode.name.lowercase() + "_ender_chest")
-}
-
-fun Player.getEnderChestKey(): NamespacedKey {
-  return getEnderChestKey(gameMode)
-}
-
-fun Player.getEffectsKey(): NamespacedKey {
-  return getEffectsKey(gameMode)
+  return NamespacedKey(splitWorldPlugin(), name + "_" + gameMode.name.lowercase() + "_ender_chest")
 }
 
 fun Player.getEffectsKey(gameMode: GameMode): NamespacedKey {
-  return NamespacedKey(getPlugin(), name + "_" + gameMode.name.lowercase() + "_eff")
+  return NamespacedKey(splitWorldPlugin(), name + "_" + gameMode.name.lowercase() + "_eff")
 }
 
 //#region PDC
 
-fun Player.setPdcInt(name: String, value: Int) = setPdcInt(getPlugin().pdcKey(name), value)
+fun Player.setPdcInt(name: String, value: Int) = setPdcInt(splitWorldPlugin().pdcKey(name), value)
 
 fun Player.setPdcInt(key: NamespacedKey, value: Int) = persistentDataContainer.set(
   key, PersistentDataType.INTEGER, value
 )
 
 fun Player.setPdcBoolean(name: String, value: Boolean) = persistentDataContainer.set(
-  getPlugin().pdcKey(name), PersistentDataType.BOOLEAN, value
+  splitWorldPlugin().pdcKey(name), PersistentDataType.BOOLEAN, value
 )
 
 fun Player.getPdcBoolean(name: String): Boolean? =
-  persistentDataContainer.get(getPlugin().pdcKey(name), PersistentDataType.BOOLEAN)
+  persistentDataContainer.get(splitWorldPlugin().pdcKey(name), PersistentDataType.BOOLEAN)
 
 fun Player.getPdcBoolean(name: String, default: Boolean): Boolean = getPdcBoolean(name) ?: default
 
 fun Player.getPdcInt(name: String): Int? =
-  persistentDataContainer.get(getPlugin().pdcKey(name), PersistentDataType.INTEGER)
+  persistentDataContainer.get(splitWorldPlugin().pdcKey(name), PersistentDataType.INTEGER)
 
 fun Player.getPdcInt(name: String, default: Int): Int = getPdcInt(name) ?: default
-
-fun Player.getPdcInt(key: NamespacedKey): Int? {
-  return persistentDataContainer.get(key, PersistentDataType.INTEGER)
-}
 
 //#endregion
 
@@ -96,9 +78,9 @@ fun Player.peekAtEnderChest(gameMode: GameMode): Array<ItemStack> =
   persistentDataContainer.get(getEnderChestKey(gameMode), ItemStackArrayDataType())
     ?: listOf<ItemStack>().toTypedArray()
 
-fun Player.peekAtEffects(gameMode: GameMode): Array<PotionEffect> =
-  persistentDataContainer.get(getEffectsKey(gameMode), PotionEffectArrayDataType())
-    ?: listOf<PotionEffect>().toTypedArray()
+fun Player.peekAtEffects(gameMode: GameMode): List<PotionEffect> =
+  (persistentDataContainer.get(getEffectsKey(gameMode), PotionEffectArrayDataType())
+    ?: listOf<PotionEffect>().toTypedArray()).toList()
 
 @Suppress("UNCHECKED_CAST")
 fun Player.stashMyInventory(gameMode: GameMode) =
@@ -160,34 +142,40 @@ fun Player.seeThatSparkle() =
 fun Player.hearThatDing() =
   I.playSound(at.my.location, Sound.BLOCK_NOTE_BLOCK_BELL, 1.0f, 1.0f)
 
-fun Player.switchGameMode(toTheOneItShouldBe: GameMode) {
-  if (my.gameMode != toTheOneItShouldBe) {
-    and_if(I.shouldHearTheDing) { ->
+fun Player.switchGameModeToWorldDefault() {
+  switchGameMode(
+    world
+      .splitConfig()
+      .defaultGameMode()
+  )
+}
+
+fun Player.switchGameMode(theOneItShouldBe: GameMode) {
+  BeforeGameModeChangeEvent(this, theOneItShouldBe).callEvent()
+  if (my.gameMode != theOneItShouldBe) {
+    andIf(I.shouldHearTheDing) {
       then.I.hearThatDing()
     }
-    also(I.shouldAlwaysSeeTheSparkle) { ->
+    also(I.shouldAlwaysSeeTheSparkle) {
       so.I.seeThatSparkle()
     }
     then.I.stashMyInventory(_for.my.gameMode)
     I.also.stashMyPotionEffects(_for.my.gameMode)
     and.I.stashMyEnderChest(_for.my.gameMode).too
     after.that
-    I.set.my.gameMode = toTheOneItShouldBe
+    I.set.my.gameMode = theOneItShouldBe
     inventory.clear()
     enderChest.clear()
     I.clearActivePotionEffects()
-    and.I.set.my.inventory.contents = peekAtInventory(toTheOneItShouldBe)
-    and.set.my.enderChest.contents = peekAtEnderChest(toTheOneItShouldBe)
-    addPotionEffects(peekAtEffects(my.gameMode).toList())
-    activePotionEffects.addAll(peekAtEffects(toTheOneItShouldBe))
+    and.I.set.my.inventory.contents = peekAtInventory(theOneItShouldBe)
+    and.set.my.enderChest.contents = peekAtEnderChest(theOneItShouldBe)
+    and.I.addPotionEffects(peekAtEffects(theOneItShouldBe))
     if (I.am.inAir()) {
       preventFirstFallDamage()
     }
   }
+  AfterGameModeChangeEvent(this, theOneItShouldBe).callEvent()
 }
-
-val Player.hasElytraEquipped: Boolean get() = inventory.chestplate != null && inventory.chestplate!!.type == Material.ELYTRA
-val Player.haveAnElytraEquipped: Boolean get() = inventory.chestplate != null && inventory.chestplate!!.type == Material.ELYTRA
 
 private val Unit.too: Any get() = this
 val Player.set: Player get() = this
@@ -195,58 +183,40 @@ val Player.after: Player get() = this
 val Player.am: Player get() = this
 val Player.that: Player get() = this
 val Player.my: Player get() = this
-val Player.me: Player get() = this
 val Player.I: Player get() = this
 val Player.so: Player get() = this
 val Player.and: Player get() = this
-fun Player.and_if(condition: Boolean, op: () -> Any?) = if (condition) op() else {
+fun andIf(condition: Boolean, op: () -> Any?) = if (condition) op() else {
 }
-fun Player.also(condition: Boolean, op: () -> Any?) = if (condition) op() else {
+
+fun also(condition: Boolean, op: () -> Any?) = if (condition) op() else {
 }
 
 val Player.then: Player get() = this
 val Player.at: Player get() = this
 val Player.also: Player get() = this
 val Player._for: Player get() = this
-val Player.finally: Player get() = this
-val Player.now: Player get() = this
-val Player.but: Player get() = this
-
 
 fun Player.switchToConfiguredGameMode() {
   if (splitWorldDisabled) {
     return
   }
   if (!world.isSplit()) {
-    switchGameMode(
-      world
-        .splitConfig()
-        .defaultGameMode()
-    )
+    switchGameMode(world.defaultGameMode)
     return
   }
   if (location.inBufferZone()) {
-    val wasFlying = isFlying
-    val wasGliding = isGliding
     switchGameMode(GameMode.ADVENTURE)
     allowFlight = true
+    val wasFlying = isFlying
+    val wasGliding = isGliding
     if (wasGliding || wasFlying) {
       isFlying = true
     }
-
-    //keep player health and hunger static while in the buffer, no healing or dying here
-    foodLevel = foodLevel
-    health = health
-    // creative side
   } else if (location.onCreativeSide()) {
     switchGameMode(GameMode.CREATIVE)
-    // survival side
   } else if (location.onDefaultSide()) {
-    switchGameMode(
-      world
-        .splitConfig()
-        .defaultGameMode()
-    )
+    switchGameMode(world.defaultGameMode)
   }
 }
 

@@ -11,7 +11,6 @@ import org.bukkit.event.block.BlockEvent
 import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.entity.*
 import org.bukkit.event.player.PlayerAttemptPickupItemEvent
-import org.bukkit.event.player.PlayerMoveEvent
 import tech.snaco.split_world.utils.*
 
 class BufferZoneListener : Listener {
@@ -51,18 +50,6 @@ class BufferZoneListener : Listener {
   }
 
   @EventHandler
-  fun onPlayerMove(event: PlayerMoveEvent) {
-    print(event.player.location.getRelevantPos())
-    if (event.player.world.isSplit() && !event.player.splitWorldDisabled) {
-      if (event.player.location.inBufferZone()) {
-        if (!event.to.isTraversable()) {
-          event.isCancelled = true
-        }
-      }
-    }
-  }
-
-  @EventHandler
   fun onPickup(event: PlayerAttemptPickupItemEvent) {
     if (event.player.location.onDifferentSide(event.item.location) || event.player.location.inBufferZone()) {
       event.isCancelled = true
@@ -75,7 +62,6 @@ class BufferZoneListener : Listener {
       event.isCancelled = true
     }
   }
-
 
   @EventHandler
   fun playerDamage(event: EntityDamageByEntityEvent) {
