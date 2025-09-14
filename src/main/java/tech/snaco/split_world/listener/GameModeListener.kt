@@ -47,7 +47,4 @@ class GameModeListener : Listener {
   fun onPlayerJoin(event: PlayerRespawnEvent) {
     event.player.switchToConfiguredGameMode()
   }
-
-
-
 }

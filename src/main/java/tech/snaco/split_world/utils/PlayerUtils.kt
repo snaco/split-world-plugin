@@ -15,24 +15,31 @@ import tech.snaco.split_world.types.PotionEffectArrayDataType
 
 
 fun Player.preventFirstFallDamage() {
-  val hadAllowFlight = allowFlight
-  // Ensure gliding can be toggled without Elytra
-  allowFlight = true
-  if (!isOnGround) {
-    isGliding = true
-  }
-
+  // Do NOT modify allowFlight or isGliding; just neutralize fall damage
   var taskRef: BukkitTask? = null
-  taskRef = Bukkit
-    .getScheduler()
-    .runTaskTimer(splitWorldPlugin(), Runnable {
-      // Stop when the player touches the ground or becomes invalid
-      if (isOnGround || !isValid || isDead) {
-        isGliding = false
-        allowFlight = hadAllowFlight
+  val plugin = splitWorldPlugin()
+  val start = System.currentTimeMillis()
+
+  taskRef = Bukkit.getScheduler().runTaskTimer(plugin, Runnable {
+    if (!isValid || isDead) {
+      taskRef?.cancel()
+      return@Runnable
+    }
+
+    // While in the air, keep resetting fall distance to prevent damage
+    if (!isOnGround) {
+      fallDistance = 0f
+      // Optional safety timeout (e.g., 10 seconds) to avoid runaway tasks
+      if (System.currentTimeMillis() - start > 10_000) {
         taskRef?.cancel()
       }
-    }, 1L, 1L)
+      return@Runnable
+    }
+
+    // Landed: ensure no damage applied this tick and stop
+    fallDistance = 0f
+    taskRef?.cancel()
+  }, 1L, 1L)
 }
 
 fun Player.getInventoryKey(gameMode: GameMode): NamespacedKey {
