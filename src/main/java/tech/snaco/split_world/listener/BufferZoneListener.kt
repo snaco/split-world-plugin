@@ -1,6 +1,7 @@
 package tech.snaco.split_world.listener
 
 import io.papermc.paper.event.packet.PlayerChunkLoadEvent
+import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.event.Cancellable
@@ -31,7 +32,7 @@ class BufferZoneListener : Listener {
   }
 
   @EventHandler
-  fun onChunkLoad(event: PlayerChunkLoadEvent) {
+  fun onPlayerLoadChunk(event: PlayerChunkLoadEvent) {
     if (event.world.isSplit()) {
       for (y in event.world.minHeight..<event.world.maxHeight) {
         for (x in 0..15) {
@@ -41,7 +42,7 @@ class BufferZoneListener : Listener {
               continue
             }
             if (block.inBufferZone) {
-              block.type = Material.COPPER_BLOCK
+              event.player.sendBlockChange(block.location, Bukkit.createBlockData(Material.AMETHYST_BLOCK))
             }
           }
         }
