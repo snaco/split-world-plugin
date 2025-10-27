@@ -36,6 +36,9 @@ class MonsterListener : Listener {
     if (!event.entity.world.isSplit()) {
       return
     }
+    if (event.target == null) {
+      return
+    }
     if (event.entity.location.onDifferentSide(event.target!!.location)) {
       event.isCancelled = true
     }
