@@ -10,6 +10,8 @@ import org.bukkit.event.inventory.InventoryOpenEvent
 import org.bukkit.event.player.PlayerDropItemEvent
 import org.bukkit.event.player.PlayerFishEvent
 import org.bukkit.event.player.PlayerInteractEvent
+import org.bukkit.event.player.PlayerMoveEvent
+import org.bukkit.event.vehicle.VehicleMoveEvent
 import org.bukkit.plugin.Plugin
 import org.bukkit.scheduler.BukkitRunnable
 import tech.snaco.split_world.types.DroppedItem
@@ -104,15 +106,10 @@ class CheatListener(plugin: Plugin) : Listener {
     if (!event.player.world.isSplit()) {
       return
     }
-    if (event.player.location.onDifferentSide(event.inventory.location!!) &&
-      event
-        .inventory
-        .location!!
-        .getRelevantPos() != event.player.world
-        .splitConfig()
-        .borderWidth()
-    ) {
-      event.isCancelled = true
+    if (event.inventory.location != null) {
+      if (event.player.location.onDifferentSide(event.inventory.location!!)) {
+        event.isCancelled = true
+      }
     }
     if (event.player.location.inBufferZone()) {
       event.isCancelled = true
@@ -163,5 +160,43 @@ class CheatListener(plugin: Plugin) : Listener {
       event.player.firstFishAttempt = false
     }
     event.player.sendMessage("Nice try.")
+  }
+
+  /**
+   * Prevents vehicles from moving across the buffer zone.
+   */
+  @EventHandler
+  fun onVehicleMove(event: VehicleMoveEvent) {
+    if (!event.vehicle.world.isSplit()) {
+      return
+    }
+    if (event.to.inBufferZone(1.0)) {
+      val config = event.vehicle.world.splitConfig()
+      val sideMod = when (event.from.onDefaultSide()) {
+        true -> config.defaultSideModifier()
+        false -> config.creativeSideModifier()
+      }
+      val tpLoc = event.from.clone().setRelevantPos((config.borderWidth() + 2) * sideMod)
+      event.vehicle.passengers.forEach { passenger -> passenger.teleport(tpLoc) }
+      event.vehicle.teleport(tpLoc)
+    }
+  }
+
+  @EventHandler
+  fun onPlayerMove(event: PlayerMoveEvent) {
+    if (!event.player.world.isSplit()) {
+      return
+    }
+    if (event.to.inBufferZone(1.0)) {
+      event.player.eject()
+      event.player.vehicle?.eject()
+      val config = event.player.world.splitConfig()
+      val sideMod = when (event.from.onDefaultSide()) {
+        true -> config.defaultSideModifier()
+        false -> config.creativeSideModifier()
+      }
+      val tpLoc = event.from.clone().setRelevantPos((config.borderWidth() + 2) * sideMod)
+      event.player.vehicle?.teleport(tpLoc)
+    }
   }
 }
