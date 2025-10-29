@@ -45,14 +45,20 @@ fun Location.inBufferZone(extra: Double): Boolean {
 }
 
 fun Location.getRelevantPos(): Double {
-  return when (this.world
-    .splitConfig()
-    .borderAxis()
-    .uppercase(Locale.getDefault())) {
+  return when (this.world.splitConfig().borderAxis().uppercase()) {
     "Y" -> this.y
     "Z" -> this.z
     else -> this.x
   }
+}
+
+fun Location.setRelevantPos(value: Double): Location {
+  when (this.world.splitConfig().borderAxis().uppercase()) {
+    "Y" -> this.y = value
+    "Z" -> this.z = value
+    else -> this.x = value
+  }
+  return this
 }
 
 fun Location.onNegativeSideOfBuffer(): Boolean {
@@ -69,10 +75,6 @@ fun Location.onPositiveSideOfBuffer(): Boolean {
 
 fun Location.onPositiveSideOfBuffer(extra: Double): Boolean {
   return getRelevantPos() > world.splitConfig().borderLocation() + world.splitConfig().borderWidth() + extra
-}
-
-fun Location.isTraversable(): Boolean {
-  return !this.world.getBlockAt(this).type.isSolid
 }
 
 fun Location.addAcrossSplitAxis(value: Double): Location {

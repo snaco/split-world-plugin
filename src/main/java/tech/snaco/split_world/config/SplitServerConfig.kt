@@ -27,6 +27,8 @@ class SplitServerConfig(val plugin: SplitWorldPlugin) {
 
   fun easterEggsEnabled(): Boolean = plugin.config.getBoolean("enable_easter_eggs", false)
   fun customRespawn(): Boolean = plugin.config.getBoolean("custom_respawn", false)
+  fun borderParticles(): Boolean = plugin.config.getBoolean("border_particles", true)
+  fun borderBlocks(): Boolean = plugin.config.getBoolean("border_blocks", true)
   fun respawnLocation(): Location {
     val locationCfg = plugin.config.getConfigurationSection("respawn_location")
       ?: error("Missing respawn_location section of split world config")

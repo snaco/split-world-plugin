@@ -37,7 +37,8 @@ class SplitWorldPlugin : JavaPlugin(), Listener {
         BufferZoneListener(),
         EasterEggListener(this),
         CheatListener(this),
-        GameModeListener()
+        GameModeListener(),
+        BufferZoneVisualizer(this),
       )
   }
 

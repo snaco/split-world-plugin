@@ -52,6 +52,10 @@ respawn_location:
   yaw: 0.0
   pitch: 0.0
 
+# renders particles at the edges of the border (client side renders these)
+border_particles: true
+# renders black concrete blocks at the edges of the border (client side renders these, and they do not affect the world)
+border_blocks: true
 
 # secret easter-eggs
 enable_easter_eggs: false
@@ -69,7 +73,6 @@ world_configs:
   # border_location: 0
   # creative_side: "negative"
   # border_width: 5
-  # replace_border_blocks: true
   # no_creative_monsters: true
   #
   # you can also set the default_game_mode for a world

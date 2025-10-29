@@ -33,17 +33,18 @@ class BufferZoneListener : Listener {
 
   @EventHandler
   fun onPlayerLoadChunk(event: PlayerChunkLoadEvent) {
-    if (event.world.isSplit()) {
-      for (y in event.world.minHeight..<event.world.maxHeight) {
-        for (x in 0..15) {
-          for (z in 0..15) {
-            val block = event.chunk.getBlock(x, y, z)
-            if (block.type.isAir || block.type == Material.LAVA || block.type == Material.WATER || block.type == Material.SNOW) {
-              continue
-            }
-            if (block.inBufferZone) {
-              event.player.sendBlockChange(block.location, Bukkit.createBlockData(Material.AMETHYST_BLOCK))
-            }
+    if (!event.world.isSplit()) {
+      return
+    }
+    if (!splitWorldPlugin().splitServerConfig.borderBlocks()) {
+      return
+    }
+    for (y in event.world.minHeight..<event.world.maxHeight) {
+      for (x in 0..15) {
+        for (z in 0..15) {
+          val block = event.chunk.getBlock(x, y, z)
+          if (block.isSolid && block.inBufferZone) {
+            event.player.sendBlockChange(block.location, Bukkit.createBlockData(Material.BLACK_CONCRETE))
           }
         }
       }
