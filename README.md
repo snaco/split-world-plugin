@@ -66,7 +66,7 @@ at x=0, resulting in a border perpendicular to the x-axis
   saved. Then their saved data for the other side is loaded.
 * Items dropped in the buffer zone are returned to the user's inventory
 * Fluid cannot flow into the buffer zone
-* Items/Entities can not be sent through portals on the creative side
+* Items/Entities cannot be sent through portals on the creative side
 * GameMode is set when a player crosses through a portal
 * GameMode is set when a player teleports to a location or player (should work with any tp plugin tested with simple
   tpa)
@@ -78,30 +78,31 @@ at x=0, resulting in a border perpendicular to the x-axis
 ## Full Config
 
 ```yaml
-default_game_mode: "survival"     # global default 
-disable_welcome_message: false    # globally disable welcome message
-enable_xp_mod: false              # changes XP loss behavior on death
-xp_loss_percentage: 25.0          # percentage of XP lost on death
-custom_respawn: false             # customize global respawn location
-respawn_location:                 # 
-  world: "split_world"            # which world players should spawn in (if they have not set their spawn point) 
-  x: 140.0                        # x coordinate
-  y: 53.0                         # y coordinate
-  z: -64.0                        # z coordinate
-  yaw: 0.0                        # player facing direction
-  pitch: 0.0                      # player facing direction
-border_particles: true            # toggles rendering particle wall for boundary
-border_blocks: true               # toggles client-side buffer-zone block replacement, this will not alter your world
-enable_easter_eggs: false         # had some fun while coding, enable this to see if you can find them all
-world_configs:                    # list of worlds to configure
-  - world_name: "world"           # name of the world
-    enabled: true                 # should the world be split
-    default_game_mode: "survival" # optional override for the global default_game_mode, this can be set even if the world is not split
-    border_axis: "X"              # axis the border is placed on
-    border_location: 0            # location on the axis to place the border
-    creative_side: "negative"     # can be positive or negative. when split, determines if the creative side is for coordinates less than border_location or greater than border_location
-    border_width: 5               # how wide the buffer zone should be. some cheat prevention methods are less reliable for smaller buffer zones
-    no_creative_monsters: true    # stops monsters from spawining on the creative side
+default_game_mode: "survival"           # global default 
+disable_welcome_message: false          # globally disable welcome message
+enable_xp_mod: false                    # changes XP loss behavior on death
+disable_advancements_in_creative: true  # disable advancements in creative mode
+xp_loss_percentage: 25.0                # percentage of XP lost on death
+custom_respawn: false                   # customize global respawn location
+respawn_location:                       # 
+  world: "split_world"                  # which world players should spawn in (if they have not set their spawn point) 
+  x: 140.0                              # x coordinate
+  y: 53.0                               # y coordinate
+  z: -64.0                              # z coordinate
+  yaw: 0.0                              # player facing direction
+  pitch: 0.0                            # player facing direction
+border_particles: true                  # toggles rendering particle wall for boundary
+border_blocks: true                     # toggles client-side buffer-zone block replacement, this will not alter your world
+enable_easter_eggs: false               # had some fun while coding, enable this to see if you can find them all
+world_configs:                          # list of worlds to configure
+  - world_name: "world"                 # name of the world
+    enabled: true                       # should the world be split
+    default_game_mode: "survival"       # optional override for the global default_game_mode, this can be set even if the world is not split
+    border_axis: "X"                    # axis the border is placed on
+    border_location: 0                  # location on the axis to place the border
+    creative_side: "negative"           # can be positive or negative. when split, determines if the creative side is for coordinates less than border_location or greater than border_location
+    border_width: 5                     # how wide the buffer zone should be. some cheat prevention methods are less reliable for smaller buffer zones
+    no_creative_monsters: true          # stops monsters from spawining on the creative side
 ```
 
 ## Minimal Per-World Example 

@@ -24,7 +24,7 @@ class SplitServerConfig(val plugin: SplitWorldPlugin) {
     plugin.config
       .getStringList("creative_commands")
       .ifEmpty { listOf("fill", "setblock", "clone") }
-
+  fun disableAdvancementsInCreative(): Boolean = plugin.config.getBoolean("disable_advancements_in_creative", true)
   fun easterEggsEnabled(): Boolean = plugin.config.getBoolean("enable_easter_eggs", false)
   fun customRespawn(): Boolean = plugin.config.getBoolean("custom_respawn", false)
   fun borderParticles(): Boolean = plugin.config.getBoolean("border_particles", true)

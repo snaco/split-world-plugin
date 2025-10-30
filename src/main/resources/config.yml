@@ -17,6 +17,8 @@ default_game_mode: "survival"
 # the welcome message with the /understood command
 disable_welcome_message: false
 
+disable_advancements_in_creative: true
+
 # When set to true, this will change the XP loss
 # behavior on death to lose the specified percentage
 enable_xp_mod: false

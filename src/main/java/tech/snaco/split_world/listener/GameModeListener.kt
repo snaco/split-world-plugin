@@ -1,5 +1,6 @@
 package tech.snaco.split_world.listener
 
+import com.destroystokyo.paper.event.player.PlayerAdvancementCriterionGrantEvent
 import com.destroystokyo.paper.event.player.PlayerPostRespawnEvent
 import org.bukkit.GameMode
 import org.bukkit.event.EventHandler
@@ -10,6 +11,7 @@ import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.event.player.PlayerRespawnEvent
 import org.bukkit.event.player.PlayerTeleportEvent
 import tech.snaco.split_world.utils.inAir
+import tech.snaco.split_world.utils.splitWorldPlugin
 import tech.snaco.split_world.utils.switchToConfiguredGameMode
 import tech.snaco.split_world.utils.warpToGround
 
@@ -46,5 +48,15 @@ class GameModeListener : Listener {
   @EventHandler(priority = EventPriority.HIGHEST)
   fun onPlayerJoin(event: PlayerRespawnEvent) {
     event.player.switchToConfiguredGameMode()
+  }
+
+  @EventHandler
+  fun onAdvancementCriterionGrant(event: PlayerAdvancementCriterionGrantEvent) {
+    if (!splitWorldPlugin().splitServerConfig.disableAdvancementsInCreative()) {
+      return
+    }
+    if (event.player.gameMode == GameMode.CREATIVE || event.player.gameMode == GameMode.SPECTATOR) {
+      event.isCancelled = true
+    }
   }
 }

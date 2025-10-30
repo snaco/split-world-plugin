@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "tech.snaco"
-version = "3.2.0+1.21"
+version = "3.2.1+1.21"
 
 repositories {
   mavenCentral()
