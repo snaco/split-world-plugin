@@ -19,7 +19,7 @@ class SplitWorldConfig(
     } ?: splitServerConfig.defaultGameMode()
 
   fun enabled(): Boolean = map["enabled"] as? Boolean ?: false
-  fun borderAxis(): String = map["border_position"] as? String ?: "X"
+  fun borderAxis(): String = map["border_axis"] as? String ?: "X"
   fun borderLocation(): Double = (map["border_location"] as? Number)?.toDouble() ?: 0.0
   fun creativeSide(): String = map["creative_side"] as? String ?: "negative"
   fun borderWidth(): Double = (map["border_width"] as? Number)?.toDouble() ?: 5.0

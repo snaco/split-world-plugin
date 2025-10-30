@@ -146,14 +146,6 @@ fun Player.stashMyEnderChest(gameMode: GameMode) =
 fun Player.stashMyPotionEffects(gameMode: GameMode) =
   persistentDataContainer.set(getEffectsKey(gameMode), PotionEffectArrayDataType(), activePotionEffects.toTypedArray())
 
-fun Player.switchGameModeToWorldDefault() {
-  switchGameMode(
-    world
-      .splitConfig()
-      .defaultGameMode()
-  )
-}
-
 fun Player.switchToConfiguredGameMode() {
   if (splitWorldDisabled) {
     return

@@ -69,7 +69,7 @@ world_configs:
 
   # These are the default values for enabled worlds:
   #
-  # border_position: "X"
+  # border_axis: "X"
   # border_location: 0
   # creative_side: "negative"
   # border_width: 5
@@ -94,10 +94,13 @@ world_configs:
   #  - world_name: "world"
   #    enabled: true
   #    default_game_mode: "adventure"
-  #    border_position: "Z"
+  #    border_axis: "Z"
   #    border_location: 200
   #    creative_side: "positive"
   #    border_width: 2
   #    replace_border_blocks: true
   #    no_creative_monsters: false
-  #
+
+  # note: border_axis is the axis that the border is placed on at the border_location.
+  # this means that the buffer_zone will be the line perpendicular to the border_axis,
+  # intersecting at the border_location.
