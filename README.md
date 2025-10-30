@@ -89,9 +89,9 @@ respawn_location:                 #
   y: 53.0                         # y coordinate
   z: -64.0                        # z coordinate
   yaw: 0.0                        # player facing direction
-  pitch: 0.0.                     # player facing direction
+  pitch: 0.0                      # player facing direction
 border_particles: true            # toggles rendering particle wall for boundary
-border_blocks: true.              # toggles client-side buffer-zone block replacement, this will not alter your world
+border_blocks: true               # toggles client-side buffer-zone block replacement, this will not alter your world
 enable_easter_eggs: false         # had some fun while coding, enable this to see if you can find them all
 world_configs:                    # list of worlds to configure
   - world_name: "world"           # name of the world
