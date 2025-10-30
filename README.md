@@ -6,31 +6,29 @@ inventories on either side of the border as well as potion effects.
 
 # GameMode Switching:
 
+* Game mode can be set per world
+* A world can have two game modes with a border dividing the world into a creative side and a configurable default game mode 
+* Player's inventory and potion effects are managed per-game mode
 * Player will be switched to either survival or creative depending on the side of the buffer zone they are on
-* The border axis is padded by the buffer zone, all solid blocks in the buffer zone are converted to bedrock (can be
-  disabled in the config) and liquids are removed
+* The border axis is padded by the buffer zone, the boundary is visualized with optional particle effects to create a 
+visible wall and/or solid blocks will be rendered as if they were black concrete
 * Sound indicator for when player switches GameMode, can be enabled or disabled with a command (see below)
-* When crossing to the survival side, if the player is in the air they will be safely teleported to the closest solid
-  block to their feet
-* If a player was flying when crossing to the survival side and the player has an elytra equipped, they will
-  automatically start gliding instead of being teleported to the ground
+* Many methods to prevent cheating are included (see below)
 
 # Buffer Zone
 
-* Defined by picking an axis, X, Y or Z, picking a border-location which is the value of the specified axis coordinate
-  where the border will be, a border-width which will determine how wide the buffer zone will be
-    * i.e: ```border_axis: X, border_location: 0, border_width: 10, creative_side: negative``` will mean the player will
-      be set to creative mode when their X coordinate is less than -5, adventure mode (buffer zone) between X=-5 and
-      X=5, and in survival when X>5
+* Defined by border axis and location, with `border_axis: 'X'` and `border_location: 0` the dividing border will be placed
+at x=0, resulting in a border perpendicular to the x-axis
 * Players cannot die in the buffer zone
 * Players cannot regain health in the buffer zone
 * Players will not lose hunger in the buffer zone
 * Players are put in adventure mode with flying enabled
-* Monsters can not enter the buffer zone, instead they will stop at the border
-* Skeletons cannot shoot players in the buffer zone
-* Player cannot pick up items if they are in the buffer zone
+* Monsters cannot enter the buffer zone, instead they will stop at the border
+* Monsters cannot target players in the buffer zone
+* Players cannot pick up items if they are in the buffer zone
+* Players cannot interact with chests in the buffer zone, or with chests that are not on the same side as the player 
 * Liquids will not flow into the buffer zone
-* Blocks in the buffer zone are converted to bedrock (can be disabled in the config)
+* Vehicles cannot enter the buffer zone
 
 # Commands
 
@@ -66,18 +64,78 @@ inventories on either side of the border as well as potion effects.
 
 * When leaving either side of the border, the player's inventory, active potion effects, and ender chest contents are
   saved. Then their saved data for the other side is loaded.
-* Items dropped into the buffer zone are deleted
+* Items dropped in the buffer zone are returned to the user's inventory
 * Fluid cannot flow into the buffer zone
 * Items/Entities can not be sent through portals on the creative side
 * GameMode is set when a player crosses through a portal
 * GameMode is set when a player teleports to a location or player (should work with any tp plugin tested with simple
   tpa)
 * Players are prevented from using a fishing pole to pull items from the creative side to the survival side.
+* Players cannot interact with chests that are not on the same side as them
 
-# Miscellaneous
+# Config Examples
 
-* when a player dies they will drop 1/4 of their XP instead of the static amount in vanilla.
+## Full Config
 
-# Easter Eggs
+```yaml
+default_game_mode: "survival"     # global default 
+disable_welcome_message: false    # globally disable welcome message
+enable_xp_mod: false              # changes XP loss behavior on death
+xp_loss_percentage: 25.0          # percentage of XP lost on death
+custom_respawn: false             # customize global respawn location
+respawn_location:                 # 
+  world: "split_world"            # which world players should spawn in (if they have not set their spawn point) 
+  x: 140.0                        # x coordinate
+  y: 53.0                         # y coordinate
+  z: -64.0                        # z coordinate
+  yaw: 0.0                        # player facing direction
+  pitch: 0.0.                     # player facing direction
+border_particles: true            # toggles rendering particle wall for boundary
+border_blocks: true.              # toggles client-side buffer-zone block replacement, this will not alter your world
+enable_easter_eggs: false         # had some fun while coding, enable this to see if you can find them all
+world_configs:                    # list of worlds to configure
+  - world_name: "world"           # name of the world
+    enabled: true                 # should the world be split
+    default_game_mode: "survival" # optional override for the global default_game_mode, this can be set even if the world is not split
+    border_axis: "X"              # axis the border is placed on
+    border_location: 0            # location on the axis to place the border
+    creative_side: "negative"     # can be positive or negative. when split, determines if the creative side is for coordinates less than border_location or greater than border_location
+    border_width: 5               # how wide the buffer zone should be. some cheat prevention methods are less reliable for smaller buffer zones
+    no_creative_monsters: true    # stops monsters from spawining on the creative side
+```
 
-* they be a thing, you'll have to find them yourself.
+## Minimal Per-World Example 
+
+```yaml
+default_game_mode: "survival"
+world_configs:
+  - world_name: "creative_world"
+    default_game_mode: "creative"
+  - world_name: "adventure_world"
+    default_game_mode: "adventure"
+```
+
+## Minimal Split World Example
+
+```yaml
+default_game_mode: "survival"
+world_configs:
+  - world_name: "split_world"
+    enabled: true
+```
+
+## Minimal Mixed Example
+
+```yaml
+default_game_mode: "spectator"
+world_configs:
+  - world_name: "split_world"
+    enabled: true
+    default_game_mode: "survival"
+  - world_name: "world"
+    default_game_mode: "survival"
+  - world_name: "world_nether"
+    default_game_mode: "survival"
+  - world_name: "world_the_end"
+    default_game_mode: "survival"
+```
