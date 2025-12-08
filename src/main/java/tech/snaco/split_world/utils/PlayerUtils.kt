@@ -40,7 +40,24 @@ fun Player.setPdcBoolean(name: String, value: Boolean) = persistentDataContainer
 fun Player.getPdcBoolean(name: String): Boolean? =
   persistentDataContainer.get(splitWorldPlugin().pdcKey(name), PersistentDataType.BOOLEAN)
 
-fun Player.getPdcBoolean(name: String, default: Boolean): Boolean = getPdcBoolean(name) ?: default
+fun Player.getPdcBoolean(name: String, default: Boolean): Boolean {
+  try {
+    return getPdcBoolean(name) ?: default
+  } catch (e: Exception) {
+    try {
+      val intVal = getPdcInt(name)
+      if (intVal != null) {
+        persistentDataContainer.remove(splitWorldPlugin().pdcKey(name))
+        persistentDataContainer.set(splitWorldPlugin().pdcKey(name), PersistentDataType.BOOLEAN, intVal == 1)
+        return intVal != 0
+      }
+    } catch (e: Exception) {
+      persistentDataContainer.set(splitWorldPlugin().pdcKey(name), PersistentDataType.BOOLEAN, default)
+      return default
+    }
+  }
+  return default
+}
 
 fun Player.getPdcInt(name: String): Int? =
   persistentDataContainer.get(splitWorldPlugin().pdcKey(name), PersistentDataType.INTEGER)
